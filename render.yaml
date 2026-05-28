@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: moliveira-admin
+    runtime: node
+    repo: https://github.com/GuiDouradoDev/site-m-oliveira
+    rootDir: admin-server
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: JWT_SECRET
+        sync: false
+      - key: PORT
+        value: 3001
+      - key: HTTPS_MODE
+        value: http
+      - key: CORS_ORIGIN
+        value: https://moliveira-admin.onrender.com,https://moliveiraseguranca.com.br,https://www.moliveiraseguranca.com.br
+      - key: WEB3FORMS_ACCESS_KEY
+        sync: false
