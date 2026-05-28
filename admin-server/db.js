@@ -7,6 +7,7 @@ const DB_PATH = path.join(__dirname, 'data', 'site.db');
 let db = null;
 
 async function initDB() {
+  fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
   const SQL = await initSqlJs();
   if (fs.existsSync(DB_PATH)) {
     const buf = fs.readFileSync(DB_PATH);
