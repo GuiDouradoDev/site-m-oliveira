@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solicitações — M. Oliveira Admin</title>
+<link rel="icon" type="image/png" sizes="256x256" href="/Icons/favicon-256.png">
+<link rel="icon" type="image/png" sizes="128x128" href="/Icons/favicon-128.png">
+<link rel="icon" type="image/png" sizes="64x64" href="/Icons/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/Icons/favicon-32.png">
+<link rel="shortcut icon" href="/Icons/favicon.ico">
+<link rel="stylesheet" href="/admin/assets/admin.css">
+<style>
+.subs-stats { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.subs-stats .stat { background: white; border-radius: 10px; padding: 16px 22px; flex: 1; min-width: 140px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid var(--border); }
+.subs-stats .stat .num { font-size: 26px; font-weight: 800; color: var(--primary); line-height: 1.1; }
+.subs-stats .stat .lbl { font-size: 12px; color: var(--text-light); margin-top: 4px; font-weight: 500; }
+.subs-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.subs-table th { text-align: left; padding: 12px 14px; border-bottom: 2px solid var(--border); font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; }
+.subs-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.subs-table tbody tr:last-child td { border-bottom: none; }
+.subs-table tbody tr { cursor: pointer; transition: background .15s; }
+.subs-table tbody tr:hover { background: var(--bg); }
+.subs-table .name-cell { font-weight: 600; }
+.subs-table .service-cell { font-size: 12px; color: var(--text-light); }
+.subs-table .date-cell { font-size: 13px; color: var(--text-light); white-space: nowrap; }
+.subs-table .actions-cell { text-align: center; white-space: nowrap; width: 48px; }
+.subs-table .actions-cell button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: none; border-radius: 6px; background: transparent; cursor: pointer; font-size: 16px; transition: all .15s; }
+.subs-table .actions-cell button:hover { background: rgba(220,38,38,0.1); }
+.subs-table .wpp-link { color: var(--success); text-decoration: none; font-weight: 600; font-size: 13px; }
+.subs-table .wpp-link:hover { text-decoration: underline; }
+
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+.detail-field { }
+.detail-field label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); margin-bottom: 4px; }
+.detail-field .value { font-size: 15px; color: var(--text); }
+.detail-field .value a { color: var(--accent); text-decoration: none; }
+.detail-field .value a:hover { text-decoration: underline; }
+.detail-field.full { grid-column: 1 / -1; }
+.detail-message { background: var(--bg); border-radius: 8px; padding: 16px; line-height: 1.6; font-size: 14px; white-space: pre-wrap; word-break: break-word; margin-top: 4px; }
+
+@media (max-width: 768px) {
+  .subs-table .service-cell,
+  .subs-table .date-cell { display: none; }
+  .detail-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-header"><h2>M. Oliveira</h2><span>Painel Administrativo</span></div>
+  <div class="sidebar-nav">
+    <a href="/admin/dashboard">📊 Dashboard</a>
+    <a href="/admin/photos">📸 Fotos</a>
+    <a href="/admin/logos">🏢 Logos</a>
+    <a href="/admin/content">✏️ Conteúdo</a>
+    <a href="/admin/services">🛠️ Serviços</a>
+    <a href="/admin/diferenciais">⭐ Diferenciais</a>
+    <a href="/admin/blog">📝 Blog (Beta)</a>
+    <a href="/admin/submissions" class="active">📋 Solicitações</a>
+  </div>
+</nav>
+<div class="main">
+  <div class="topbar"><h1>📋 Solicitações de Orçamento</h1><div class="user-info"><span id="userDisplay"></span><button onclick="logout()">Sair</button></div></div>
+  <div class="content">
+    <div class="subs-stats" id="subsStats"></div>
+    <div class="card"><div id="submissionsList"></div></div>
+  </div>
+</div>
+<div class="modal-overlay" id="detailModal"><div class="modal" style="max-width:600px">
+  <h2 id="detailName" style="margin-bottom:4px"></h2>
+  <div class="detail-grid" id="detailGrid"></div>
+  <div style="margin-top:20px">
+    <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-light);margin-bottom:4px">Mensagem</label>
+    <div class="detail-message" id="detailMessage"></div>
+  </div>
+  <div class="modal-actions" style="margin-top:20px">
+    <button class="btn btn-danger btn-sm" id="detailDeleteBtn" style="margin-right:auto">🗑️ Excluir</button>
+    <button class="btn btn-primary" onclick="document.getElementById('detailModal').classList.remove('open')">Fechar</button>
+  </div>
+</div></div>
+<script src="/admin/assets/shared.js"></script>
+<script>
+document.getElementById('userDisplay').textContent = localStorage.getItem('username') || 'Admin';
+var subsData = [];
+
+function formatPhone(p) {
+  if (!p) return '-';
+  var digits = p.replace(/\D/g, '');
+  if (digits.length === 11) return '(' + digits.slice(0,2) + ') ' + digits.slice(2,7) + '-' + digits.slice(7);
+  if (digits.length === 10) return '(' + digits.slice(0,2) + ') ' + digits.slice(2,6) + '-' + digits.slice(6);
+  return p;
+}
+
+function wppUrl(p) {
+  var d = p.replace(/\D/g, '');
+  return 'https://wa.me/55' + d;
+}
+
+function viewSub(id) {
+  var s = subsData.find(function(x) { return x.id === id; });
+  if (!s) return;
+  document.getElementById('detailName').textContent = s.name + (s.company ? ' — ' + s.company : '');
+  document.getElementById('detailGrid').innerHTML =
+    '<div class="detail-field"><label>Empresa</label><div class="value">' + (s.company || '-') + '</div></div>' +
+    '<div class="detail-field"><label>WhatsApp</label><div class="value"><a href="' + wppUrl(s.phone) + '" target="_blank">' + formatPhone(s.phone) + ' ↗</a></div></div>' +
+    '<div class="detail-field"><label>Email</label><div class="value">' + (s.email ? '<a href="mailto:' + s.email + '">' + s.email + '</a>' : '-') + '</div></div>' +
+    '<div class="detail-field"><label>Serviço de Interesse</label><div class="value">' + (s.service || '-') + '</div></div>' +
+    '<div class="detail-field"><label>Data</label><div class="value" style="color:var(--text-light)">' + new Date(s.created_at + ' UTC').toLocaleString('pt-BR') + '</div></div>';
+  document.getElementById('detailMessage').textContent = s.message || '(sem mensagem)';
+  var delBtn = document.getElementById('detailDeleteBtn');
+  delBtn.onclick = function() { deleteSub(s.id); };
+  document.getElementById('detailModal').classList.add('open');
+}
+
+async function loadSubmissions() {
+  try {
+    subsData = await api('/api/submissions').then(function(r) { return r.json(); });
+    var subs = subsData;
+
+    // Stats
+    var total = subs.length;
+    var today = subs.filter(function(s) { return new Date(s.created_at + ' UTC').toDateString() === new Date().toDateString(); }).length;
+    document.getElementById('subsStats').innerHTML =
+      '<div class="stat"><div class="num">' + total + '</div><div class="lbl">Total de solicitações</div></div>' +
+      '<div class="stat"><div class="num">' + today + '</div><div class="lbl">Hoje</div></div>';
+
+    var list = document.getElementById('submissionsList');
+    if (subs.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>Nenhuma solicitação recebida ainda</p></div>';
+      return;
+    }
+
+    list.innerHTML = '<div class="table-wrap"><table class="subs-table">' +
+      '<colgroup><col><col><col><col class="col-service"><col class="col-date"><col class="col-actions"></colgroup>' +
+      '<thead><tr><th>Nome</th><th>Empresa</th><th>Contato</th><th class="service-cell">Serviço</th><th class="date-cell">Data</th><th class="actions-cell"></th></tr></thead><tbody>' +
+      subs.map(function(s) {
+        var shortMsg = (s.message || '').substring(0, 30);
+        var hasMsg = s.message && s.message.length > 0;
+        return '<tr onclick="viewSub(' + s.id + ')">' +
+          '<td class="name-cell">' + s.name + '</td>' +
+          '<td style="color:var(--text-light)">' + (s.company || '-') + '</td>' +
+          '<td><a href="' + wppUrl(s.phone) + '" target="_blank" class="wpp-link" onclick="event.stopPropagation()">' + formatPhone(s.phone) + '</a>' +
+            (s.email ? '<br><span style="font-size:11px;color:var(--text-light)">' + s.email + '</span>' : '') +
+          '</td>' +
+          '<td class="service-cell">' + (s.service || '-') + '</td>' +
+          '<td class="date-cell">' + new Date(s.created_at + ' UTC').toLocaleDateString('pt-BR') + '</td>' +
+          '<td class="actions-cell"><button data-delete-id="' + s.id + '" onclick="event.stopPropagation();deleteSub(' + s.id + ')" title="Excluir">🗑️</button></td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody></table></div>';
+  } catch (e) {
+    toast('Erro ao carregar', 'error');
+    console.error(e);
+  }
+}
+
+async function deleteSub(id) {
+  if (!confirmDelete('Excluir esta solicitação?')) return;
+  try {
+    var r = await api('/api/submissions/' + id, { method: 'DELETE' });
+    if (!r.ok) { var e = await r.json(); toast(e.error || 'Erro ao excluir', 'error'); return; }
+    toast('Solicitação excluída');
+    document.getElementById('detailModal').classList.remove('open');
+    loadSubmissions();
+  } catch (e) {
+    toast('Erro de conexão ao excluir', 'error');
+  }
+}
+
+loadSubmissions();
+</script>
+</body>
+</html>

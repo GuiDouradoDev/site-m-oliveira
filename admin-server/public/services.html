@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Serviços — M. Oliveira Admin</title>
+<link rel="icon" type="image/png" sizes="256x256" href="/Icons/favicon-256.png">
+<link rel="icon" type="image/png" sizes="128x128" href="/Icons/favicon-128.png">
+<link rel="icon" type="image/png" sizes="64x64" href="/Icons/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/Icons/favicon-32.png">
+<link rel="shortcut icon" href="/Icons/favicon.ico">
+<link rel="stylesheet" href="/admin/assets/admin.css">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-header"><h2>M. Oliveira</h2><span>Painel Administrativo</span></div>
+  <div class="sidebar-nav">
+    <a href="/admin/dashboard">📊 Dashboard</a>
+    <a href="/admin/photos">📸 Fotos</a>
+    <a href="/admin/logos">🏢 Logos</a>
+    <a href="/admin/content">✏️ Conteúdo</a>
+    <a href="/admin/services" class="active">🛠️ Serviços</a>
+    <a href="/admin/diferenciais">⭐ Diferenciais</a>
+    <a href="/admin/blog">📝 Blog (Beta)</a>
+    <a href="/admin/submissions">📋 Solicitações</a>
+  </div>
+</nav>
+<div class="main">
+  <div class="topbar"><h1>🛠️ Serviços</h1><div class="user-info"><span id="userDisplay"></span><button onclick="logout()">Sair</button></div></div>
+  <div class="content">
+    <div class="card">
+      <h3>Novo Serviço</h3>
+      <div class="form-grid">
+        <div class="form-group"><label>Título *</label><input type="text" id="svTitle" placeholder="Ex: PGR"></div>
+        <div class="form-group"><label>Ícone (emoji)</label><input type="text" id="svIcon" value="📋" placeholder="📋"></div>
+      </div>
+      <div class="form-group"><label>Descrição</label><textarea id="svDesc" rows="3" placeholder="Descrição do serviço"></textarea></div>
+      <button class="btn btn-primary" onclick="addService()">Adicionar Serviço</button>
+    </div>
+    <div id="servicesList"></div>
+  </div>
+</div>
+<div class="modal-overlay" id="editModal"><div class="modal">
+  <h2>Editar Serviço</h2>
+  <div class="form-group"><label>Título</label><input type="text" id="editTitle"></div>
+  <div class="form-group"><label>Ícone (emoji)</label><input type="text" id="editIcon"></div>
+  <div class="form-group"><label>Descrição</label><textarea id="editDesc" rows="4"></textarea></div>
+  <div class="form-group"><label>Ordem</label><input type="number" id="editOrder" value="0"></div>
+  <div class="form-group"><label><input type="checkbox" id="editActive" checked> Ativo</label></div>
+  <div class="modal-actions"><button class="btn btn-outline" onclick="closeEdit()">Cancelar</button><button class="btn btn-primary" onclick="saveEdit()">Salvar</button></div>
+</div></div>
+<script src="/admin/assets/shared.js"></script>
+<script>
+document.getElementById('userDisplay').textContent = localStorage.getItem('username') || 'Admin';
+let editingId = null;
+
+async function addService() {
+  const title = document.getElementById('svTitle').value;
+  const icon = document.getElementById('svIcon').value;
+  const description = document.getElementById('svDesc').value;
+  if (!title) return toast('Digite o título do serviço', 'error');
+  try {
+    await api('/api/services', { method: 'POST', body: JSON.stringify({ title, icon, description }) });
+    toast('Serviço adicionado!');
+    document.getElementById('svTitle').value = ''; document.getElementById('svDesc').value = '';
+    loadServices();
+  } catch (e) { toast('Erro ao adicionar', 'error'); }
+}
+
+async function loadServices() {
+  try {
+    const services = await api('/api/services').then(r => r.json());
+    const list = document.getElementById('servicesList');
+    if (services.length === 0) { list.innerHTML = '<div class="empty-state"><div class="icon">🛠️</div><p>Nenhum serviço cadastrado</p></div>'; return; }
+    list.innerHTML = '<div class="card"><div class="table-wrap"><table><tr><th>Ordem</th><th>Ícone</th><th>Título</th><th>Status</th><th>Ações</th></tr>' + services.map(s =>
+      `<tr>
+        <td>${s.sort_order}</td>
+        <td style="font-size:22px">${s.icon || '📋'}</td>
+        <td><strong>${s.title}</strong></td>
+        <td>${s.active ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-warning">Inativo</span>'}</td>
+        <td class="actions-cell">
+          <button class="btn btn-sm btn-outline" onclick="editService(${s.id})">✏️</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteService(${s.id})">🗑️</button>
+        </td>
+      </tr>`
+    ).join('') + '</table></div></div>';
+  } catch (e) { toast('Erro ao carregar', 'error'); }
+}
+
+async function editService(id) {
+  try {
+    const all = await api('/api/services').then(r => r.json());
+    const svc = all.find(s => s.id === id);
+    if (!svc) return;
+    editingId = id;
+    document.getElementById('editTitle').value = svc.title;
+    document.getElementById('editIcon').value = svc.icon || '📋';
+    document.getElementById('editDesc').value = svc.description || '';
+    document.getElementById('editOrder').value = svc.sort_order || 0;
+    document.getElementById('editActive').checked = !!svc.active;
+    document.getElementById('editModal').classList.add('open');
+  } catch (e) { toast('Erro ao carregar', 'error'); }
+}
+function closeEdit() { document.getElementById('editModal').classList.remove('open'); editingId = null; }
+async function saveEdit() {
+  const body = {
+    title: document.getElementById('editTitle').value,
+    icon: document.getElementById('editIcon').value,
+    description: document.getElementById('editDesc').value,
+    sort_order: parseInt(document.getElementById('editOrder').value) || 0,
+    active: document.getElementById('editActive').checked
+  };
+  await api('/api/services/' + editingId, { method: 'PUT', body: JSON.stringify(body) });
+  toast('Serviço atualizado'); closeEdit(); loadServices();
+}
+async function deleteService(id) {
+  if (!confirmDelete('Excluir este serviço?')) return;
+  await api('/api/services/' + id, { method: 'DELETE' });
+  toast('Serviço excluído'); loadServices();
+}
+loadServices();
+</script>
+</body>
+</html>

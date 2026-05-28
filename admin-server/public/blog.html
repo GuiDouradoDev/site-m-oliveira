@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog — M. Oliveira Admin</title>
+<link rel="icon" type="image/png" sizes="256x256" href="/Icons/favicon-256.png">
+<link rel="icon" type="image/png" sizes="128x128" href="/Icons/favicon-128.png">
+<link rel="icon" type="image/png" sizes="64x64" href="/Icons/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/Icons/favicon-32.png">
+<link rel="shortcut icon" href="/Icons/favicon.ico">
+<link rel="stylesheet" href="/admin/assets/admin.css">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-header"><h2>M. Oliveira</h2><span>Painel Administrativo</span></div>
+  <div class="sidebar-nav">
+    <a href="/admin/dashboard">📊 Dashboard</a>
+    <a href="/admin/photos">📸 Fotos</a>
+    <a href="/admin/logos">🏢 Logos</a>
+    <a href="/admin/content">✏️ Conteúdo</a>
+    <a href="/admin/services">🛠️ Serviços</a>
+    <a href="/admin/diferenciais">⭐ Diferenciais</a>
+    <a href="/admin/blog" class="active">📝 Blog (Beta)</a>
+    <a href="/admin/submissions">📋 Solicitações</a>
+  </div>
+</nav>
+<div class="main">
+  <div class="topbar"><h1>📝 Blog</h1><div class="user-info"><span id="userDisplay"></span><button onclick="logout()">Sair</button></div></div>
+  <div class="content">
+    <div class="card">
+      <h3>Novo Post</h3>
+      <div class="form-group"><label>Título</label><input type="text" id="postTitle"></div>
+      <div class="form-group"><label>Resumo (opcional)</label><input type="text" id="postExcerpt" placeholder="Breve descrição para aparecer na listagem"></div>
+      <div class="form-group"><label>Conteúdo</label><textarea id="postContent" rows="10" placeholder="Escreva o conteúdo do post..."></textarea></div>
+      <div style="display:flex;gap:12px">
+        <button class="btn btn-primary" onclick="savePost()">Publicar</button>
+        <button class="btn btn-outline" onclick="savePost(true)">Salvar como Rascunho</button>
+      </div>
+    </div>
+    <div class="card"><h3>Todos os Posts</h3><div id="postsList"></div></div>
+  </div>
+</div>
+<div class="modal-overlay" id="editModal"><div class="modal" style="max-width:700px">
+  <h2>Editar Post</h2>
+  <div class="form-group"><label>Título</label><input type="text" id="editTitle"></div>
+  <div class="form-group"><label>Resumo</label><input type="text" id="editExcerpt"></div>
+  <div class="form-group"><label>Conteúdo</label><textarea id="editContent" rows="8"></textarea></div>
+  <div class="form-group"><label><input type="checkbox" id="editPublished" checked> Publicado</label></div>
+  <div class="modal-actions"><button class="btn btn-outline" onclick="closeEdit()">Cancelar</button><button class="btn btn-primary" onclick="saveEdit()">Salvar</button></div>
+</div></div>
+<script src="/admin/assets/shared.js"></script>
+<script>
+document.getElementById('userDisplay').textContent = localStorage.getItem('username') || 'Admin';
+let editingId = null;
+
+async function savePost(draft) {
+  const title = document.getElementById('postTitle').value;
+  const content = document.getElementById('postContent').value;
+  const excerpt = document.getElementById('postExcerpt').value;
+  if (!title || !content) return toast('Preencha título e conteúdo', 'error');
+  try {
+    await api('/api/blog', { method: 'POST', body: JSON.stringify({ title, content, excerpt, published: draft ? 0 : 1 }) });
+    toast(draft ? 'Rascunho salvo' : 'Post publicado!');
+    document.getElementById('postTitle').value = ''; document.getElementById('postContent').value = ''; document.getElementById('postExcerpt').value = '';
+    loadPosts();
+  } catch (e) { toast('Erro ao salvar', 'error'); }
+}
+
+async function loadPosts() {
+  try {
+    const posts = await api('/api/blog?all=1').then(r => r.json());
+    const list = document.getElementById('postsList');
+    if (posts.length === 0) { list.innerHTML = '<div class="empty-state"><div class="icon">📝</div><p>Nenhum post criado</p></div>'; return; }
+    list.innerHTML = '<div class="table-wrap"><table><tr><th>Título</th><th>Data</th><th>Status</th><th>Ações</th></tr>' + posts.map(p =>
+      `<tr>
+        <td><strong>${p.title}</strong></td>
+        <td style="color:var(--text-light);font-size:13px">${new Date(p.created_at).toLocaleDateString('pt-BR')}</td>
+        <td>${p.published ? '<span class="badge badge-success">Publicado</span>' : '<span class="badge badge-warning">Rascunho</span>'}</td>
+        <td class="actions-cell">
+          <button class="btn btn-sm btn-outline" onclick="editPost(${p.id})">✏️ Editar</button>
+          <button class="btn btn-sm btn-danger" onclick="deletePost(${p.id})">🗑️</button>
+        </td>
+      </tr>`
+    ).join('') + '</table></div>';
+  } catch (e) { toast('Erro ao carregar posts', 'error'); }
+}
+
+async function editPost(id) {
+  try {
+    const post = await api('/api/blog/' + id).then(r => r.json());
+    editingId = id;
+    document.getElementById('editTitle').value = post.title;
+    document.getElementById('editExcerpt').value = post.excerpt || '';
+    document.getElementById('editContent').value = post.content;
+    document.getElementById('editPublished').checked = !!post.published;
+    document.getElementById('editModal').classList.add('open');
+  } catch (e) { toast('Erro ao carregar post', 'error'); }
+}
+function closeEdit() { document.getElementById('editModal').classList.remove('open'); editingId = null; }
+async function saveEdit() {
+  const title = document.getElementById('editTitle').value;
+  const excerpt = document.getElementById('editExcerpt').value;
+  const content = document.getElementById('editContent').value;
+  const published = document.getElementById('editPublished').checked;
+  if (!title || !content) return toast('Preencha título e conteúdo', 'error');
+  await api('/api/blog/' + editingId, { method: 'PUT', body: JSON.stringify({ title, content, excerpt, published }) });
+  toast('Post atualizado'); closeEdit(); loadPosts();
+}
+async function deletePost(id) {
+  if (!confirmDelete('Excluir este post?')) return;
+  await api('/api/blog/' + id, { method: 'DELETE' });
+  toast('Post excluído'); loadPosts();
+}
+loadPosts();
+</script>
+</body>
+</html>

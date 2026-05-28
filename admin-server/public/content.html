@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conteúdo — M. Oliveira Admin</title>
+<link rel="icon" type="image/png" sizes="256x256" href="/Icons/favicon-256.png">
+<link rel="icon" type="image/png" sizes="128x128" href="/Icons/favicon-128.png">
+<link rel="icon" type="image/png" sizes="64x64" href="/Icons/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/Icons/favicon-32.png">
+<link rel="shortcut icon" href="/Icons/favicon.ico">
+<link rel="stylesheet" href="/admin/assets/admin.css">
+<style>
+.section-group { margin-bottom: 32px; }
+.section-group:last-child { margin-bottom: 0; }
+.section-group .section-header {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--primary); margin-bottom: 16px; padding-bottom: 10px;
+  border-bottom: 2px solid var(--primary);
+}
+.section-group .section-header .icon { font-size: 18px; }
+.section-group p { font-size: 13px; background: var(--bg); padding: 8px 12px; border-radius: 6px; color: var(--text-light); }
+.content-field { margin-bottom: 20px; }
+.content-field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+.content-field .hint { font-size: 12px; color: var(--text-light); margin-bottom: 8px; }
+.content-field textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; transition: border .2s; resize: vertical; }
+.content-field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.content-field .char-count { text-align: right; font-size: 11px; color: var(--text-light); margin-top: 4px; }
+.content-field.whatsapp-field input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; transition: border .2s; }
+.content-field.whatsapp-field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.save-bar {
+  position: sticky; bottom: 0; background: white; border-top: 1px solid var(--border);
+  padding: 16px 24px; margin: 0 -24px -24px; border-radius: 0 0 12px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.save-bar .status { font-size: 13px; color: var(--text-light); }
+.save-bar .status.saved { color: var(--success); }
+.save-bar .btn { padding: 12px 32px; font-size: 15px; }
+.unsaved-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--warning); margin-right: 8px; vertical-align: middle; }
+@media (max-width: 768px) {
+  .save-bar { flex-direction: column; gap: 12px; }
+  .save-bar .btn { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-header"><h2>M. Oliveira</h2><span>Painel Administrativo</span></div>
+  <div class="sidebar-nav">
+    <a href="/admin/dashboard">📊 Dashboard</a>
+    <a href="/admin/photos">📸 Fotos</a>
+    <a href="/admin/logos">🏢 Logos</a>
+    <a href="/admin/content" class="active">✏️ Conteúdo</a>
+    <a href="/admin/services">🛠️ Serviços</a>
+    <a href="/admin/diferenciais">⭐ Diferenciais</a>
+    <a href="/admin/blog">📝 Blog (Beta)</a>
+    <a href="/admin/submissions">📋 Solicitações</a>
+  </div>
+</nav>
+<div class="main">
+  <div class="topbar"><h1>✏️ Conteúdo do Site</h1><div class="user-info"><span id="userDisplay"></span><button onclick="logout()">Sair</button></div></div>
+  <div class="content">
+    <div class="card">
+      <p style="color:var(--text-light);font-size:13px;margin-bottom:20px">Altere os textos do seu site. Use <code>&lt;br&gt;</code> para quebra de linha.</p>
+      <div id="contentFields"></div>
+      <div class="save-bar">
+        <span class="status" id="saveStatus">Nenhuma alteração</span>
+        <button class="btn btn-primary" onclick="saveContent()">💾 Salvar Todas as Alterações</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/admin/assets/shared.js"></script>
+<script>
+document.getElementById('userDisplay').textContent = localStorage.getItem('username') || 'Admin';
+
+let hasChanges = false;
+let charCountInterval = null;
+
+const groups = [
+  {
+    icon: '🏠', title: 'Topo do Site (Hero)',
+    fields: [
+      { key: 'hero_title', label: 'Título principal', hint: 'Frase de destaque no topo do site' },
+      { key: 'hero_subtitle', label: 'Subtítulo', hint: 'Aparece acima do título principal' },
+      { key: 'hero_slogan', label: 'Slogan / Frase de apoio', hint: 'Texto complementar abaixo do título' }
+    ]
+  },
+  {
+    icon: '📞', title: 'Contato',
+    fields: [
+      { key: 'whatsapp', label: 'Número do WhatsApp', hint: 'Apenas números (ex: 5511964407743). Atualiza todos os botões do site automaticamente.', whatsapp: true },
+      { key: 'instagram', label: 'Instagram', input: true },
+      { key: 'email', label: 'E-mail', input: true }
+    ]
+  },
+  {
+    icon: '🏢', title: 'Quem Somos',
+    fields: [
+      { key: 'about_title', label: 'Título da seção' },
+      { key: 'about_text', label: 'Texto da seção', rows: 5 }
+    ]
+  },
+  {
+    icon: '🛠️', title: 'Serviços',
+    fields: [
+      { key: 'services_title', label: 'Título da seção' },
+      { key: 'services_desc', label: 'Descrição da seção' }
+    ]
+  },
+  {
+    icon: '🎓', title: 'Treinamentos',
+    fields: [
+      { key: 'treinamentos_title', label: 'Título da seção' },
+      { key: 'treinamentos_desc', label: 'Descrição da seção' }
+    ]
+  },
+  {
+    icon: '🤝', title: 'Clientes & Parceiros',
+    fields: [
+      { key: 'clientes_title', label: 'Título da seção' },
+      { key: 'clientes_desc', label: 'Descrição da seção' }
+    ]
+  },
+  {
+    icon: '⭐', title: 'Diferenciais',
+    fields: [
+      { key: 'diferenciais_title', label: 'Título da seção' },
+      { key: 'diferenciais_desc', label: 'Descrição da seção' }
+    ]
+  },
+  {
+    icon: '📋', title: 'Orçamento / Contato',
+    fields: [
+      { key: 'contato_title', label: 'Título da seção' },
+      { key: 'contato_desc', label: 'Descrição da seção' }
+    ]
+  },
+  {
+    icon: '📊', title: 'Estatísticas do Hero',
+    hint: 'Indicadores numéricos exibidos na seção inicial',
+    fields: [
+      { key: 'stat1_title', label: 'Título — Atendimento Nacional' },
+      { key: 'stat1_label', label: 'Descrição — Atendimento Nacional' },
+      { key: 'stat2_title', label: 'Título — Capacitações SST' },
+      { key: 'stat2_label', label: 'Descrição — Capacitações SST' },
+      { key: 'stat3_title', label: 'Título — Conformidade Legal' },
+      { key: 'stat3_label', label: 'Descrição — Conformidade Legal' }
+    ]
+  },
+  {
+    icon: '🌍', title: 'Onde Atendemos',
+    fields: [
+      { key: 'onde_title', label: 'Título da seção' },
+      { key: 'onde_desc', label: 'Descrição da seção' },
+      { key: 'onde_servicos', label: 'Serviços', hint: 'Lista de serviços oferecidos nacionalmente' },
+      { key: 'onde_atuacao_label', label: 'Label — Atuação Nacional' },
+      { key: 'onde_atuacao', label: 'Texto — Atuação Nacional', rows: 3 },
+      { key: 'onde_horario_label', label: 'Label — Horário' },
+      { key: 'onde_horario_semana', label: 'Horário — Dias úteis' },
+      { key: 'onde_horario_sabado', label: 'Horário — Sábado' }
+    ]
+  },
+  {
+    icon: '📄', title: 'Rodapé',
+    fields: [
+      { key: 'footer_text', label: 'Texto do rodapé', hint: 'Ex: © 2025 M. Oliveira. Todos os direitos reservados.' }
+    ]
+  }
+];
+
+function getFieldValue(key) {
+  var el = document.getElementById('field_' + key);
+  return el ? el.value : '';
+}
+
+function markChanged() {
+  hasChanges = true;
+  var st = document.getElementById('saveStatus');
+  st.innerHTML = '<span class="unsaved-dot"></span>Alterações não salvas';
+  st.className = 'status';
+}
+
+function updateCharCount(input) {
+  var parent = input.closest('.content-field');
+  if (!parent) return;
+  var count = parent.querySelector('.char-count');
+  if (!count) {
+    count = document.createElement('div');
+    count.className = 'char-count';
+    parent.appendChild(count);
+  }
+  var len = input.value.length;
+  var max = 5000;
+  count.textContent = len + ' / ' + max + ' caracteres';
+  count.style.color = len > max ? 'var(--danger)' : len > 4500 ? 'var(--warning)' : 'var(--text-light)';
+}
+
+function renderField(f, data) {
+  var val = (data[f.key] || '');
+  if (f.whatsapp) {
+    return '<div class="content-field whatsapp-field">' +
+      '<label>' + f.label + '</label>' +
+      (f.hint ? '<div class="hint">' + f.hint + '</div>' : '') +
+      '<input type="text" id="field_' + f.key + '" value="' + val.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') + '" maxlength="20" placeholder="5511964407743">' +
+    '</div>';
+  }
+  if (f.input) {
+    return '<div class="content-field">' +
+      '<label>' + f.label + '</label>' +
+      (f.hint ? '<div class="hint">' + f.hint + '</div>' : '') +
+      '<input type="text" id="field_' + f.key + '" value="' + val.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') + '" maxlength="200">' +
+    '</div>';
+  }
+  var rows = f.rows || (f.key.includes('_text') || f.key === 'hero_slogan' || f.key === 'about_text' ? 4 : 2);
+  return '<div class="content-field">' +
+    '<label>' + f.label + '</label>' +
+    (f.hint ? '<div class="hint">' + f.hint + '</div>' : '') +
+    '<textarea id="field_' + f.key + '" rows="' + rows + '" maxlength="5000">' + val.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</textarea>' +
+  '</div>';
+}
+
+function renderGroup(g, data) {
+  var html = '<div class="section-group">' +
+    '<div class="section-header"><span class="icon">' + g.icon + '</span> ' + g.title + '</div>' +
+    (g.hint ? '<p>' + g.hint + '</p>' : '');
+  g.fields.forEach(function(f) { html += renderField(f, data); });
+  html += '</div>';
+  return html;
+}
+
+async function loadContent() {
+  try {
+    var data = await api('/api/content').then(function(r) { return r.json(); });
+    var container = document.getElementById('contentFields');
+    var html = '';
+    groups.forEach(function(g) { html += renderGroup(g, data); });
+    container.innerHTML = html;
+
+    // Attach change listeners for live char count + unsaved status
+    container.querySelectorAll('textarea, input').forEach(function(el) {
+      el.addEventListener('input', function() {
+        markChanged();
+        if (this.tagName === 'TEXTAREA') updateCharCount(this);
+      });
+      if (el.tagName === 'TEXTAREA') updateCharCount(el);
+    });
+
+    // Reset status
+    hasChanges = false;
+    document.getElementById('saveStatus').textContent = 'Nenhuma alteração';
+    document.getElementById('saveStatus').className = 'status';
+  } catch (e) {
+    toast('Erro ao carregar conteúdo', 'error');
+    console.error(e);
+  }
+}
+
+async function saveContent() {
+  var body = {};
+  groups.forEach(function(g) {
+    g.fields.forEach(function(f) {
+      body[f.key] = document.getElementById('field_' + f.key).value;
+    });
+  });
+  var btn = document.querySelector('.save-bar .btn');
+  var originalText = btn.innerHTML;
+  btn.innerHTML = '⏳ Salvando...';
+  btn.disabled = true;
+  try {
+    await api('/api/content', { method: 'PUT', body: JSON.stringify(body) });
+    hasChanges = false;
+    var st = document.getElementById('saveStatus');
+    st.textContent = '✓ Salvo com sucesso!';
+    st.className = 'status saved';
+    toast('Conteúdo salvo com sucesso!');
+  } catch (e) {
+    toast('Erro ao salvar', 'error');
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+}
+
+// Warn if leaving with unsaved changes
+window.addEventListener('beforeunload', function(e) {
+  if (hasChanges) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+loadContent();
+</script>
+</body>
+</html>

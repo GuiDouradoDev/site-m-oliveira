@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — M. Oliveira Admin</title>
+<link rel="icon" type="image/png" sizes="256x256" href="/Icons/favicon-256.png">
+<link rel="icon" type="image/png" sizes="128x128" href="/Icons/favicon-128.png">
+<link rel="icon" type="image/png" sizes="64x64" href="/Icons/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/Icons/favicon-32.png">
+<link rel="shortcut icon" href="/Icons/favicon.ico">
+<link rel="stylesheet" href="/admin/assets/admin.css">
+<style>
+.welcome { margin-bottom: 28px; }
+.welcome h2 { font-size: 22px; font-weight: 700; }
+.welcome p { color: var(--text-light); font-size: 14px; margin-top: 4px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.stat-card {
+  background: white; border-radius: 12px; padding: 20px;
+  border: 1px solid var(--border); transition: all .2s;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.stat-card .stat-icon { font-size: 24px; margin-bottom: 4px; }
+.stat-card .number { font-size: 28px; font-weight: 800; color: var(--primary); line-height: 1.1; }
+.stat-card .label { font-size: 12px; color: var(--text-light); font-weight: 500; }
+.stat-card .action-link {
+  margin-top: 8px; font-size: 12px; color: var(--accent); text-decoration: none;
+  opacity: 0; transition: opacity .2s; font-weight: 600;
+}
+.stat-card:hover .action-link { opacity: 1; }
+
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; flex-wrap: wrap; gap: 8px;
+}
+.section-header h3 { font-size: 16px; font-weight: 700; }
+.section-header a { font-size: 13px; color: var(--accent); text-decoration: none; font-weight: 600; }
+.section-header a:hover { text-decoration: underline; }
+
+.photo-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.photo-strip .item {
+  border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--border); background: var(--bg);
+  transition: all .2s;
+}
+.photo-strip .item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.photo-strip .item img {
+  width: 100%; height: 110px; object-fit: cover; display: block;
+}
+.photo-strip .item .name {
+  padding: 8px 10px; font-size: 12px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.quick-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.quick-actions a {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px; border: 1px solid var(--border);
+  border-radius: 10px; font-size: 13px; font-weight: 600;
+  text-decoration: none; color: var(--text);
+  background: white; transition: all .2s;
+}
+.quick-actions a:hover {
+  border-color: var(--accent); color: var(--accent);
+  background: rgba(59,130,246,0.03); transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat-card { padding: 14px; }
+  .stat-card .number { font-size: 22px; }
+  .quick-actions a { flex: 1; justify-content: center; }
+  .photo-strip { grid-template-columns: repeat(3, 1fr); }
+}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-header"><h2>M. Oliveira</h2><span>Painel Administrativo</span></div>
+  <div class="sidebar-nav">
+    <a href="/admin/dashboard" class="active">📊 Dashboard</a>
+    <a href="/admin/photos">📸 Fotos</a>
+    <a href="/admin/logos">🏢 Logos</a>
+    <a href="/admin/content">✏️ Conteúdo</a>
+    <a href="/admin/services">🛠️ Serviços</a>
+    <a href="/admin/diferenciais">⭐ Diferenciais</a>
+    <a href="/admin/blog">📝 Blog (Beta)</a>
+    <a href="/admin/submissions">📋 Solicitações</a>
+  </div>
+</nav>
+<div class="main">
+  <div class="topbar">
+    <h1>Dashboard</h1>
+    <div class="user-info">
+      <span id="userDisplay"></span>
+      <button onclick="showPasswordModal()">🔑 Senha</button>
+      <button onclick="logout()">Sair</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="welcome">
+      <h2 id="greeting">Olá, <span id="userName"></span> 👋</h2>
+      <p>Bem-vindo ao painel administrativo da M. Oliveira Segurança do Trabalho.</p>
+    </div>
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="card">
+      <div class="section-header">
+        <h3>📸 Fotos Recentes</h3>
+        <a href="/admin/photos">Gerenciar fotos →</a>
+      </div>
+      <div id="recentPhotos"></div>
+    </div>
+    <div class="card">
+      <div class="section-header">
+        <h3>📝 Últimas Solicitações</h3>
+        <a href="/admin/submissions">Ver todas →</a>
+      </div>
+      <div id="recentSubmissions"></div>
+    </div>
+    <div class="card">
+      <div class="section-header">
+        <h3>🛠️ Modo Manutenção</h3>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <label style="position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0">
+          <input type="checkbox" id="maintenanceToggle" onchange="toggleMaintenance()" style="opacity:0;width:0;height:0">
+          <span style="position:absolute;cursor:pointer;inset:0;background:#cbd5e1;border-radius:26px;transition:.3s"></span>
+          <span id="maintenanceKnob" style="position:absolute;content:'';height:20px;width:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s"></span>
+        </label>
+        <span id="maintenanceStatus" style="font-size:14px;font-weight:600"></span>
+        <span style="font-size:12px;color:var(--text-light)">Quando ativo, visitantes veem uma página de "Site em Manutenção". Você continua tendo acesso normal ao painel.</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-header">
+        <h3>📋 Acesso Rápido</h3>
+      </div>
+      <div class="quick-actions">
+        <a href="/admin/content">✏️ Editar Conteúdo</a>
+        <a href="/admin/photos">📸 Gerenciar Fotos</a>
+        <a href="/admin/services">🛠️ Gerenciar Serviços</a>
+        <a href="/admin/submissions">📋 Ver Solicitações</a>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="passwordModal"><div class="modal">
+  <h2>🔑 Alterar Senha</h2>
+  <div class="form-group"><label>Senha Atual</label><input type="password" id="pwCurrent" autocomplete="current-password"></div>
+  <div class="form-group"><label>Nova Senha (mín. 6 caracteres)</label><input type="password" id="pwNew" autocomplete="new-password"></div>
+  <div class="form-group"><label>Confirmar Nova Senha</label><input type="password" id="pwConfirm" autocomplete="new-password"></div>
+  <div class="modal-actions"><button class="btn btn-outline" onclick="closePasswordModal()">Cancelar</button><button class="btn btn-primary" onclick="changePassword()">Alterar Senha</button></div>
+</div></div>
+<script src="/admin/assets/shared.js"></script>
+<script>
+document.getElementById('userDisplay').textContent = localStorage.getItem('username') || 'Admin';
+document.getElementById('userName').textContent = localStorage.getItem('username') || 'Admin';
+
+function timeGreeting() {
+  var h = new Date().getHours();
+  if (h < 12) return 'Bom dia';
+  if (h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+document.getElementById('greeting').textContent = timeGreeting() + ', ' + (localStorage.getItem('username') || 'Admin') + ' 👋';
+
+var statConfig = [
+  { icon: '📸', label: 'Fotos de Treinamento', key: 'photos', url: '/admin/photos' },
+  { icon: '🏢', label: 'Logos de Clientes', key: 'logos', url: '/admin/logos' },
+  { icon: '📋', label: 'Solicitações Recebidas', key: 'subs', url: '/admin/submissions' },
+  { icon: '🛠️', label: 'Serviços Cadastrados', key: 'services', url: '/admin/services' },
+  { icon: '⭐', label: 'Diferenciais', key: 'difs', url: '/admin/diferenciais' },
+  { icon: '📝', label: 'Posts do Blog', key: 'posts', url: '/admin/blog' }
+];
+
+var maintenanceOn = false;
+
+async function loadMaintenanceStatus() {
+  try {
+    var data = await api('/api/content').then(function(r) { return r.json(); });
+    maintenanceOn = data.maintenance_mode === '1';
+    var toggle = document.getElementById('maintenanceToggle');
+    toggle.checked = maintenanceOn;
+    updateMaintenanceUI();
+  } catch (e) { console.error(e); }
+}
+
+function updateMaintenanceUI() {
+  var knob = document.getElementById('maintenanceKnob');
+  var status = document.getElementById('maintenanceStatus');
+  var toggle = document.getElementById('maintenanceToggle');
+  var bg = toggle.nextElementSibling;
+  if (maintenanceOn) {
+    knob.style.transform = 'translateX(22px)';
+    bg.style.background = '#dc2626';
+    status.textContent = '🟢 Site em Manutenção — visitantes veem página de manutenção';
+    status.style.color = 'var(--danger)';
+  } else {
+    knob.style.transform = 'translateX(0)';
+    bg.style.background = '#cbd5e1';
+    status.textContent = '⚫ Site Online — modo manutenção desativado';
+    status.style.color = 'var(--text-light)';
+  }
+}
+
+async function toggleMaintenance() {
+  try {
+    var r = await api('/api/content', {
+      method: 'PUT',
+      body: JSON.stringify({ maintenance_mode: maintenanceOn ? '0' : '1' })
+    });
+    var data = await r.json();
+    if (!r.ok) return toast(data.error || 'Erro ao alternar modo manutenção', 'error');
+    maintenanceOn = !maintenanceOn;
+    updateMaintenanceUI();
+    toast(maintenanceOn ? '🔴 Modo manutenção ativado!' : '✅ Site online novamente!');
+  } catch (e) { toast('Erro ao alternar modo manutenção', 'error'); }
+}
+
+async function load() {
+  try {
+    var [photos, logos, posts, subs, services, difs] = await Promise.all([
+      api('/api/photos').then(function(r) { return r.json(); }),
+      api('/api/logos').then(function(r) { return r.json(); }),
+      api('/api/blog?all=1').then(function(r) { return r.json(); }),
+      api('/api/submissions').then(function(r) { return r.json(); }),
+      api('/api/services').then(function(r) { return r.json(); }),
+      api('/api/diferenciais').then(function(r) { return r.json(); })
+    ]);
+
+    var statsGrid = document.getElementById('statsGrid');
+    var values = { photos: photos.length, logos: logos.length, posts: posts.length, subs: subs.length, services: services.length, difs: difs.length };
+    statsGrid.innerHTML = statConfig.map(function(s) {
+      return '<a href="' + s.url + '" class="stat-card" style="text-decoration:none;color:inherit">' +
+        '<div class="stat-icon">' + s.icon + '</div>' +
+        '<div class="number">' + values[s.key] + '</div>' +
+        '<div class="label">' + s.label + '</div>' +
+        '<span class="action-link">Gerenciar →</span>' +
+      '</a>';
+    }).join('');
+
+    // Recent photos
+    var recentPhotos = document.getElementById('recentPhotos');
+    if (photos.length === 0) {
+      recentPhotos.innerHTML = '<div class="empty-state" style="padding:30px 20px"><p>Nenhuma foto adicionada ainda</p></div>';
+    } else {
+      recentPhotos.innerHTML = '<div class="photo-strip">' + photos.slice(0, 6).map(function(p) {
+        return '<div class="item"><img src="/uploads/photos/' + p.filename + '" alt="' + p.title + '" loading="lazy"><div class="name">' + p.title + '</div></div>';
+      }).join('') + '</div>';
+    }
+
+    // Recent submissions
+    var recentSubs = document.getElementById('recentSubmissions');
+    if (subs.length === 0) {
+      recentSubs.innerHTML = '<div class="empty-state" style="padding:30px 20px"><p>Nenhuma solicitação recebida</p></div>';
+    } else {
+      recentSubs.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Empresa</th><th>WhatsApp</th><th>Data</th></tr></thead><tbody>' + subs.slice(0, 5).map(function(s) {
+        return '<tr>' +
+          '<td><strong>' + s.name + '</strong></td>' +
+          '<td style="color:var(--text-light)">' + (s.company || '-') + '</td>' +
+          '<td style="color:var(--text-light)">' + (s.phone || '-') + '</td>' +
+          '<td style="color:var(--text-light);font-size:13px;white-space:nowrap">' + new Date(s.created_at).toLocaleDateString('pt-BR') + '</td>' +
+        '</tr>';
+      }).join('') + '</tbody></table></div>';
+    }
+  } catch (e) {
+    toast('Erro ao carregar dados', 'error');
+    console.error(e);
+  }
+}
+
+function showPasswordModal() { document.getElementById('passwordModal').classList.add('open'); }
+function closePasswordModal() { document.getElementById('passwordModal').classList.remove('open'); }
+async function changePassword() {
+  var current = document.getElementById('pwCurrent').value;
+  var pw = document.getElementById('pwNew').value;
+  var confirm = document.getElementById('pwConfirm').value;
+  if (!current || !pw) return toast('Preencha todos os campos', 'error');
+  if (pw.length < 6) return toast('Nova senha deve ter no mínimo 6 caracteres', 'error');
+  if (pw !== confirm) return toast('Senhas não conferem', 'error');
+  try {
+    var r = await api('/api/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword: current, newPassword: pw }) });
+    var data = await r.json();
+    if (!r.ok) return toast(data.error || 'Erro ao alterar senha', 'error');
+    toast('Senha alterada com sucesso!');
+    closePasswordModal();
+    document.getElementById('pwCurrent').value = '';
+    document.getElementById('pwNew').value = '';
+    document.getElementById('pwConfirm').value = '';
+  } catch (e) { toast('Erro ao alterar senha', 'error'); }
+}
+loadMaintenanceStatus();
+load();
+</script>
+</body>
+</html>

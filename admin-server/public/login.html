@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — M. Oliveira Admin</title>
+<link rel="icon" type="image/png" sizes="256x256" href="/Icons/favicon-256.png">
+<link rel="icon" type="image/png" sizes="128x128" href="/Icons/favicon-128.png">
+<link rel="icon" type="image/png" sizes="64x64" href="/Icons/favicon-64.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/Icons/favicon-32.png">
+<link rel="shortcut icon" href="/Icons/favicon.ico">
+<link rel="stylesheet" href="/admin/assets/admin.css">
+</head>
+<body class="login-page">
+<div class="login-box">
+  <h1>Painel Administrativo</h1>
+  <p>M. Oliveira Segurança do Trabalho</p>
+  <div class="form-group">
+    <label>Usuário</label>
+    <input type="text" id="username" placeholder="Digite seu usuário" autocomplete="username">
+  </div>
+  <div class="form-group">
+    <label>Senha</label>
+    <input type="password" id="password" placeholder="Digite sua senha" autocomplete="current-password">
+  </div>
+  <button class="btn btn-primary" onclick="login()">Entrar</button>
+  <p id="loginError" style="color:#dc2626;font-size:13px;margin-top:12px;display:none"></p>
+</div>
+<script>
+async function login() {
+  const username = document.getElementById('username').value;
+  const password = document.getElementById('password').value;
+  const err = document.getElementById('loginError');
+  if (!username || !password) { err.textContent = 'Preencha todos os campos'; err.style.display = 'block'; return; }
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await r.json();
+    if (r.ok) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('username', data.username);
+      window.location.href = '/admin/dashboard';
+    } else {
+      err.textContent = data.error || 'Erro ao fazer login';
+      err.style.display = 'block';
+    }
+  } catch (e) {
+    err.textContent = 'Erro de conexão com o servidor';
+    err.style.display = 'block';
+  }
+}
+document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+</script>
+</body>
+</html>
