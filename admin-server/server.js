@@ -118,6 +118,9 @@ if (HTTPS_MODE === 'http') {
 
 initDB();
 
+const { seed } = require('./seed');
+seed().catch(e => console.error('Seed error:', e));
+
 app.use('/api/auth', authRouter);
 app.use('/api/photos', photosRouter);
 app.use('/api/logos', logosRouter);

@@ -110,43 +110,39 @@ async function seed() {
     }
   }
 
-  const PHOTOS_SRC = path.join(__dirname, '..', 'fotos-servicos');
   const PHOTOS_DST = path.join(__dirname, 'uploads', 'photos');
   let photosImported = 0;
-  if (fs.existsSync(PHOTOS_SRC)) {
-    const files = fs.readdirSync(PHOTOS_SRC).filter(f => /\.jpe?g$/i.test(f));
+  if (fs.existsSync(PHOTOS_DST)) {
+    const files = fs.readdirSync(PHOTOS_DST).filter(f => /\.(jpe?g|png)$/i.test(f));
     for (const f of files) {
-      const src = path.join(PHOTOS_SRC, f);
-      const dst = path.join(PHOTOS_DST, f);
-      if (!fs.existsSync(dst)) fs.copyFileSync(src, dst);
       if (!filenameExists('photos', f)) {
-        prepare('INSERT INTO photos (filename, title) VALUES (?, ?)').run([f, f.replace(/\.jpe?g$/i, '').substring(0, 60)]);
+        prepare('INSERT INTO photos (filename, title) VALUES (?, ?)').run([f, f.replace(/\.(jpe?g|png)$/i, '').substring(0, 60)]);
         photosImported++;
       }
     }
-    console.log(`${photosImported} new photos imported (${files.length} total found).`);
+    console.log(`${photosImported} new photos imported from uploads (${files.length} total found).`);
   }
 
-  const LOGOS_SRC = path.join(__dirname, '..', 'clientes-parceiros');
   const LOGOS_DST = path.join(__dirname, 'uploads', 'logos');
   let logosImported = 0;
-  if (fs.existsSync(LOGOS_SRC)) {
-    const files = fs.readdirSync(LOGOS_SRC).filter(f => /\.(png|jpe?g|svg)$/i.test(f));
+  if (fs.existsSync(LOGOS_DST)) {
+    const files = fs.readdirSync(LOGOS_DST).filter(f => /\.(png|jpe?g|svg)$/i.test(f));
     for (const f of files) {
-      const src = path.join(LOGOS_SRC, f);
-      const dst = path.join(LOGOS_DST, f);
-      if (!fs.existsSync(dst)) fs.copyFileSync(src, dst);
       const company = path.parse(f).name;
       if (!filenameExists('logos', f)) {
         prepare('INSERT INTO logos (filename, company_name) VALUES (?, ?)').run([f, company]);
         logosImported++;
       }
     }
-    console.log(`${logosImported} new logos imported (${files.length} total found).`);
+    console.log(`${logosImported} new logos imported from uploads (${files.length} total found).`);
   }
 
   saveDB();
   console.log('Seed completed successfully!');
 }
 
-seed().catch(e => { console.error('Seed error:', e); process.exit(1); });
+if (require.main === module) {
+  seed().catch(e => { console.error('Seed error:', e); process.exit(1); });
+}
+
+module.exports = { seed };
