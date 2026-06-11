@@ -89,13 +89,45 @@ async function uploadFiles(files) {
 }
 
 function renderPhotoCard(p) {
-  return '<div class="grid-item">' +
-    '<img class="thumb" src="/uploads/photos/' + p.filename + '" alt="' + p.title + '">' +
-    '<div class="info"><div class="name">' + p.title + '</div><div class="date">' + new Date(p.created_at).toLocaleDateString('pt-BR') + '</div></div>' +
-    '<div class="actions">' +
-    '<button onclick="editPhoto(' + p.id + ',\'' + p.title.replace(/'/g,"\\'") + '\')" title="Editar">✏️</button>' +
-    '<button class="del-btn" onclick="deletePhoto(' + p.id + ')" title="Excluir">🗑️</button>' +
-    '</div></div>';
+  var item = document.createElement('div');
+  item.className = 'grid-item';
+
+  var img = document.createElement('img');
+  img.className = 'thumb';
+  img.src = '/uploads/photos/' + p.filename;
+  img.alt = p.title || '';
+  item.appendChild(img);
+
+  var info = document.createElement('div');
+  info.className = 'info';
+  var nameDiv = document.createElement('div');
+  nameDiv.className = 'name';
+  nameDiv.textContent = p.title;
+  info.appendChild(nameDiv);
+  var dateDiv = document.createElement('div');
+  dateDiv.className = 'date';
+  dateDiv.textContent = new Date(p.created_at).toLocaleDateString('pt-BR');
+  info.appendChild(dateDiv);
+  item.appendChild(info);
+
+  var actions = document.createElement('div');
+  actions.className = 'actions';
+
+  var editBtn = document.createElement('button');
+  editBtn.textContent = '✏️';
+  editBtn.title = 'Editar';
+  editBtn.onclick = function() { editPhoto(p.id, p.title); };
+  actions.appendChild(editBtn);
+
+  var delBtn = document.createElement('button');
+  delBtn.className = 'del-btn';
+  delBtn.textContent = '🗑️';
+  delBtn.title = 'Excluir';
+  delBtn.onclick = function() { deletePhoto(p.id); };
+  actions.appendChild(delBtn);
+
+  item.appendChild(actions);
+  return item.outerHTML;
 }
 
 function selectService(serviceId) {

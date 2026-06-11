@@ -48,7 +48,20 @@ app.use(cors(corsOptions));
 
 const helmet = require('helmet');
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      formAction: ["'self'"],
+      baseUri: ["'self'"],
+    },
+  },
   strictTransportSecurity: HTTPS_MODE === 'http' ? false : {
     maxAge: 31536000,
     includeSubDomains: true,
@@ -60,8 +73,8 @@ app.use(helmet({
   xDownloadOptions: true,
   xXSSProtection: false,
   crossOriginEmbedderPolicy: false,
-  crossOriginOpenerPolicy: { policy: 'unsafe-none' },
-  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
 app.use(express.json());

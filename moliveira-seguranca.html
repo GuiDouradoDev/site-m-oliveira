@@ -1324,13 +1324,20 @@
     var apiUrl = getApiUrl();
     var isFileProtocol = window.location.protocol === 'file:';
 
-    function renderPhotos(fotos, title) {
-      if (!fotos || fotos.length === 0) return '';
-      var html = '';
+    function buildGalleryItems(fotos) {
+      if (!fotos || fotos.length === 0) return null;
+      var fragment = document.createDocumentFragment();
       fotos.forEach(function(foto) {
-        html += '<div class="gallery-item"><img src="' + apiUrl + '/uploads/photos/' + foto.filename + '" alt="' + (foto.title || 'Treinamento') + '" loading="lazy"></div>';
+        var item = document.createElement('div');
+        item.className = 'gallery-item';
+        var img = document.createElement('img');
+        img.src = apiUrl + '/uploads/photos/' + foto.filename;
+        img.alt = foto.title || 'Treinamento';
+        img.loading = 'lazy';
+        item.appendChild(img);
+        fragment.appendChild(item);
       });
-      return html;
+      return fragment;
     }
 
     function populateSection(svc, fotos) {
@@ -1338,10 +1345,22 @@
       if (!section) return;
       var grid = section.querySelector('.gallery-grid');
       if (!grid) return;
+      grid.innerHTML = '';
       if (!fotos || fotos.length === 0) {
-        grid.innerHTML = '<div class="gallery-item gallery-placeholder"><span class="gallery-icon">📸</span><span class="gallery-label">Nenhuma foto cadastrada</span></div>';
+        var placeholder = document.createElement('div');
+        placeholder.className = 'gallery-item gallery-placeholder';
+        var icon = document.createElement('span');
+        icon.className = 'gallery-icon';
+        icon.textContent = '📸';
+        placeholder.appendChild(icon);
+        var label = document.createElement('span');
+        label.className = 'gallery-label';
+        label.textContent = 'Nenhuma foto cadastrada';
+        placeholder.appendChild(label);
+        grid.appendChild(placeholder);
       } else {
-        grid.innerHTML = renderPhotos(fotos);
+        var items = buildGalleryItems(fotos);
+        if (items) grid.appendChild(items);
       }
     }
 
@@ -1386,7 +1405,8 @@
           block.appendChild(h3);
           var grid = document.createElement('div');
           grid.className = 'gallery-grid';
-          grid.innerHTML = renderPhotos(groups[svc.id]);
+          var items = buildGalleryItems(groups[svc.id]);
+          if (items) grid.appendChild(items);
           block.appendChild(grid);
           galeria.appendChild(block);
           delete groups[svc.id];
@@ -1403,7 +1423,8 @@
         block.appendChild(h3);
         var grid = document.createElement('div');
         grid.className = 'gallery-grid';
-        grid.innerHTML = renderPhotos(groups[sid]);
+        var items = buildGalleryItems(groups[sid]);
+        if (items) grid.appendChild(items);
         block.appendChild(grid);
         galeria.appendChild(block);
       }
@@ -1596,9 +1617,16 @@
           services.forEach(function(s) {
             var card = document.createElement('div');
             card.className = 'service-card';
-            card.innerHTML = '<div class="service-icon">' + (s.icon || '📋') + '</div>' +
-              '<h3>' + s.title + '</h3>' +
-              '<p>' + (s.description || '') + '</p>';
+            var iconDiv = document.createElement('div');
+            iconDiv.className = 'service-icon';
+            iconDiv.textContent = s.icon || '📋';
+            card.appendChild(iconDiv);
+            var h3 = document.createElement('h3');
+            h3.textContent = s.title;
+            card.appendChild(h3);
+            var p = document.createElement('p');
+            p.textContent = s.description || '';
+            card.appendChild(p);
             servicesGrid.appendChild(card);
           });
         })
@@ -1637,9 +1665,16 @@
           items.forEach(function(d) {
             var div = document.createElement('div');
             div.className = 'diferencial';
-            div.innerHTML = '<span class="diferencial-icon">' + (d.icon || '⭐') + '</span>' +
-              '<h4>' + d.title + '</h4>' +
-              '<p>' + (d.description || '') + '</p>';
+            var span = document.createElement('span');
+            span.className = 'diferencial-icon';
+            span.textContent = d.icon || '⭐';
+            div.appendChild(span);
+            var h4 = document.createElement('h4');
+            h4.textContent = d.title;
+            div.appendChild(h4);
+            var p = document.createElement('p');
+            p.textContent = d.description || '';
+            div.appendChild(p);
             difGrid.appendChild(div);
           });
         })

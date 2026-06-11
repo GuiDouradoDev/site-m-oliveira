@@ -27,7 +27,7 @@ router.post('/', authMiddleware, (req, res) => {
   if (description && !maxLength(description, 1000)) return res.status(400).json({ error: 'Descrição muito longa (máx. 1000 caracteres)' });
   try {
     prepare('INSERT INTO diferenciais (title, description, icon) VALUES (?, ?, ?)')
-      .run([sanitize(title), sanitize(description || ''), icon || '⭐']);
+      .run([sanitize(title), sanitize(description || ''), sanitize(icon) || '⭐']);
     saveDB();
     res.json({ success: true });
   } catch (e) {
@@ -41,7 +41,7 @@ router.put('/:id', authMiddleware, (req, res) => {
   try {
     const t = title !== undefined ? sanitize(title) : null;
     const d = description !== undefined ? sanitize(description) : null;
-    const i = icon !== undefined ? icon : null;
+    const i = icon !== undefined ? sanitize(icon) : null;
     const so = sort_order !== undefined ? sort_order : null;
     const a = active !== undefined ? (active ? 1 : 0) : null;
     if (t === null && d === null && i === null && so === null && a === null)
