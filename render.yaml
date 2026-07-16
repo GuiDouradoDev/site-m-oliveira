@@ -14,6 +14,6 @@ services:
       - key: HTTPS_MODE
         value: http
       - key: CORS_ORIGIN
-        value: https://moliveira-admin.onrender.com,https://moliveiraseguranca.com.br,https://www.moliveiraseguranca.com.br
+        value: https://moliveira-admin.onrender.com,https://moliveiraseguranca.com.br,https://www.moliveiraseguranca.com.br,https://guidouradodev.github.io
       - key: WEB3FORMS_ACCESS_KEY
         sync: false
