@@ -168,7 +168,10 @@
     min-height: 100vh;
     background: var(--navy);
     position: relative; overflow: hidden;
-    display: flex; align-items: center;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr auto;
+    align-items: center;
     padding: 120px 5% 80px;
   }
 
@@ -189,6 +192,7 @@
 
   .hero-content {
     position: relative; z-index: 2; max-width: 700px;
+    grid-column: 1; grid-row: 1;
   }
 
   .hero-badge {
@@ -251,7 +255,8 @@
 
   .hero-logo {
     position: relative; z-index: 2;
-    flex: 1; display: flex; justify-content: center; align-items: center;
+    grid-column: 2; grid-row: 1;
+    display: flex; justify-content: center; align-items: center;
     margin-left: 40px;
     align-self: flex-start; margin-top: -40px;
   }
@@ -263,7 +268,9 @@
   }
 
   .hero-stats {
-    position: absolute; bottom: 60px; right: 5%;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: end;
     display: flex; gap: 40px; z-index: 2;
   }
 
@@ -726,13 +733,13 @@
   @media (max-width: 900px) {
     nav { display: none; }
     .hamburger { display: flex; }
-    .hero-stats { position: static; margin-top: 60px; justify-content: flex-start; }
-    .hero { padding-bottom: 60px; flex-direction: column; align-items: flex-start; }
+    .hero { grid-template-columns: 1fr; padding-bottom: 60px; align-items: start; }
+    .hero-stats { justify-self: start; margin-top: 60px; }
     .hero-logo {
       margin-left: 0;
       margin-top: 40px;
       align-self: center;
-      flex: none;
+      grid-column: 1;
       width: 100%;
     }
     .hero-logo-img {
