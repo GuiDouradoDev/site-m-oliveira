@@ -89,10 +89,10 @@ async function initDB() {
 
   const row = db.exec('SELECT COUNT(*) as c FROM users')[0].values[0][0];
   if (row === 0) {
-    const hash = bcrypt.hashSync('admin123', 10);
+    const hash = bcrypt.hashSync('seg123', 10);
     db.run('INSERT INTO users (username, password_hash) VALUES (?, ?)', ['admin', hash]);
     console.log('');
-    console.log('⚠  ATENÇÃO: Usuário padrão criado — admin / admin123');
+    console.log('⚠  ATENÇÃO: Usuário padrão criado — admin / seg123');
     console.log('⚠  Altere a senha imediatamente após o primeiro login!');
     console.log('');
   }
