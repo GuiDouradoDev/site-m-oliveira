@@ -30,13 +30,32 @@ router.post('/login', (req, res) => {
   try {
     const stmt = prepare('SELECT * FROM users WHERE username = ?');
     stmt.bind([username]);
+    let user = null;
     if (stmt.step()) {
-      const row = stmt.getAsObject();
-      if (bcrypt.compareSync(password, row.password_hash)) {
-        const token = jwt.sign({ id: row.id, username: row.username }, JWT_SECRET, { expiresIn: '24h' });
-        return res.json({ token, username: row.username });
-      }
+      user = stmt.getAsObject();
     }
+
+    const envUser = process.env.ADMIN_USERNAME;
+    const envHash = process.env.ADMIN_PASSWORD_HASH;
+
+    if (user && bcrypt.compareSync(password, user.password_hash)) {
+      const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
+      return res.json({ token, username: user.username });
+    }
+
+    if (envUser && envHash && username === envUser && bcrypt.compareSync(password, envHash)) {
+      if (!user) {
+        prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run([username, envHash]);
+        const stmt2 = prepare('SELECT * FROM users WHERE username = ?');
+        stmt2.bind([username]);
+        stmt2.step();
+        user = stmt2.getAsObject();
+      }
+      saveDB();
+      const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
+      return res.json({ token, username: user.username });
+    }
+
     res.status(401).json({ error: 'Usuário ou senha incorretos' });
   } catch (e) {
     console.error('Login error:', e);

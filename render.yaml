@@ -6,12 +6,12 @@ services:
     rootDir: admin-server
     buildCommand: npm install
     startCommand: node server.js
-    disk:
-      name: site-data
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD_HASH
         sync: false
       - key: PORT
         value: 3001
@@ -19,7 +19,5 @@ services:
         value: http
       - key: CORS_ORIGIN
         value: https://moliveira-admin.onrender.com,https://moliveiraseguranca.com.br,https://www.moliveiraseguranca.com.br,https://guidouradodev.github.io
-      - key: DB_PATH
-        value: /data/site.db
       - key: WEB3FORMS_ACCESS_KEY
         sync: false
