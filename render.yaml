@@ -6,10 +6,6 @@ services:
     rootDir: admin-server
     buildCommand: npm install
     startCommand: node server.js
-    disk:
-      name: moliveira-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: JWT_SECRET
         sync: false
@@ -21,10 +17,6 @@ services:
         value: 3001
       - key: HTTPS_MODE
         value: http
-      - key: DB_PATH
-        value: /var/data/site.db
-      - key: UPLOAD_DIR
-        value: /var/data/uploads
       - key: CORS_ORIGIN
         value: https://moliveira-admin.onrender.com,https://moliveiraseguranca.com.br,https://www.moliveiraseguranca.com.br,https://guidouradodev.github.io
       - key: WEB3FORMS_ACCESS_KEY
