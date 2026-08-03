@@ -292,7 +292,7 @@
   }
 
   /* ─── SECTION STYLES ─── */
-  section { padding: 100px 5%; }
+  section { padding: 100px 5%; scroll-margin-top: 84px; }
   .section-label {
     display: inline-block; font-size: 11px; font-weight: 700;
     letter-spacing: 3px; text-transform: uppercase;
@@ -808,6 +808,10 @@
   }
 
   @media (max-width: 768px) {
+    header { height: 64px; padding: 0 16px; }
+    header .logo-icon { width: 58px; height: 58px; }
+    .mobile-nav { top: 64px; max-height: calc(100vh - 64px); overflow-y: auto; }
+    .mobile-nav a { font-size: 16px; padding: 13px 0; }
     .hero-stats { gap: 28px; flex-wrap: wrap; }
     .form-row { grid-template-columns: 1fr; }
     .orcamento-form { padding: 32px 24px; }
@@ -817,6 +821,9 @@
     .hero h1 {
       font-size: clamp(38px, 12vw, 52px);
     }
+    .hero-ctas { flex-direction: column; align-items: stretch; }
+    .hero-ctas .btn-primary,
+    .hero-ctas .btn-secondary { width: 100%; justify-content: center; }
     .orcamento-form { padding: 24px 16px; }
     .form-field input,
     .form-field select,
@@ -846,10 +853,16 @@
   }
 
   @media (max-width: 600px) {
-    section { padding: 70px 5%; }
+    section { padding: 70px 5%; scroll-margin-top: 74px; }
     .gallery-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
     }
+    .lightbox { padding: 12px; }
+    .lightbox-btn { width: 38px; height: 38px; font-size: 18px; }
+    .lightbox-close { top: 12px; right: 12px; }
+    .lightbox-prev { left: 8px; }
+    .lightbox-next { right: 8px; }
     .footer-inner { flex-direction: column; text-align: center; }
   }
 
