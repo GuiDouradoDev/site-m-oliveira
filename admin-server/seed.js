@@ -110,7 +110,7 @@ async function seed() {
     }
   }
 
-  const PHOTOS_DST = path.join(__dirname, 'uploads', 'photos');
+  const PHOTOS_DST = path.join(process.env.UPLOAD_DIR || path.join(__dirname, 'uploads'), 'photos');
   let photosImported = 0;
   if (fs.existsSync(PHOTOS_DST)) {
     const files = fs.readdirSync(PHOTOS_DST).filter(f => /\.(jpe?g|png)$/i.test(f));
@@ -123,7 +123,7 @@ async function seed() {
     console.log(`${photosImported} new photos imported from uploads (${files.length} total found).`);
   }
 
-  const LOGOS_DST = path.join(__dirname, 'uploads', 'logos');
+  const LOGOS_DST = path.join(process.env.UPLOAD_DIR || path.join(__dirname, 'uploads'), 'logos');
   let logosImported = 0;
   if (fs.existsSync(LOGOS_DST)) {
     const files = fs.readdirSync(LOGOS_DST).filter(f => /\.(png|jpe?g|svg)$/i.test(f));
