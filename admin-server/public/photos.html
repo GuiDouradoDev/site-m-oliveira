@@ -116,14 +116,16 @@ function renderPhotoCard(p) {
   var editBtn = document.createElement('button');
   editBtn.textContent = '✏️';
   editBtn.title = 'Editar';
-  editBtn.onclick = function() { editPhoto(p.id, p.title); };
+  editBtn.dataset.action = 'edit';
+  editBtn.dataset.id = p.id;
   actions.appendChild(editBtn);
 
   var delBtn = document.createElement('button');
   delBtn.className = 'del-btn';
   delBtn.textContent = '🗑️';
   delBtn.title = 'Excluir';
-  delBtn.onclick = function() { deletePhoto(p.id); };
+  delBtn.dataset.action = 'delete';
+  delBtn.dataset.id = p.id;
   actions.appendChild(delBtn);
 
   item.appendChild(actions);
@@ -242,6 +244,19 @@ async function deletePhoto(id) {
   await api('/api/photos/' + id, { method: 'DELETE' });
   toast('Foto excluída'); loadPhotos();
 }
+
+document.getElementById('photoList').addEventListener('click', function(e) {
+  var btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  var id = parseInt(btn.dataset.id, 10);
+  var photo = photosData.find(function(p) { return p.id === id; });
+  if (btn.dataset.action === 'delete') {
+    deletePhoto(id);
+  } else if (btn.dataset.action === 'edit' && photo) {
+    editPhoto(photo.id, photo.title);
+  }
+});
+
 loadPhotos();
 </script>
 </body>
