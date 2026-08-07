@@ -61,3 +61,19 @@ function confirmDelete(msg) { return confirm(msg || 'Tem certeza que deseja excl
     if (e.key === 'Escape' && sidebar.classList.contains('open')) toggleMobileMenu();
   });
 })();
+
+// Link para o site público (canto inferior esquerdo da sidebar)
+(function () {
+  var sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+  var isLocal = ['localhost', '127.0.0.1'].indexOf(window.location.hostname) !== -1;
+  var siteUrl = isLocal ? window.location.origin + '/' : 'https://moliveiraseguranca.com.br';
+  var a = document.createElement('a');
+  a.className = 'sidebar-site-link';
+  a.href = siteUrl;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.textContent = '🌐 Ver Site';
+  a.title = 'Abrir o site em uma nova aba';
+  sidebar.appendChild(a);
+})();

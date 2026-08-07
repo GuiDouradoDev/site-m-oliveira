@@ -1667,6 +1667,15 @@
     fetch(apiUrl + '/api/content')
       .then(function(r) { return r.json(); })
       .then(function(content) {
+        // Modo manutenção (controlado pelo painel admin)
+        if (content.maintenance_mode === '1') {
+          var overlay = document.getElementById('maintenance-overlay');
+          if (overlay) {
+            var msgEl = document.getElementById('maintenance-msg');
+            if (msgEl && content.maintenance_message) msgEl.textContent = content.maintenance_message;
+            overlay.classList.add('open');
+          }
+        }
         var map = {
           'hero-subtitle': content.hero_subtitle,
           'hero-title': content.hero_title,
@@ -1946,6 +1955,35 @@
     <img id="lightboxImg" src="" alt="">
     <button class="lightbox-btn lightbox-next" id="lightboxNext" aria-label="Próxima foto">›</button>
     <span class="lightbox-count" id="lightboxCount"></span>
+  </div>
+
+  <!-- Modo Manutenção (ativado pelo painel admin) -->
+  <style>
+    #maintenance-overlay {
+      display: none; position: fixed; inset: 0; z-index: 99999;
+      background: #0a1628; color: #fff; font-family: 'Barlow', sans-serif;
+      align-items: center; justify-content: center; padding: 24px; text-align: center;
+    }
+    #maintenance-overlay.open { display: flex; }
+    #maintenance-overlay img {
+      width: 120px; height: 120px; margin: 0 auto 16px; display: block;
+      filter: brightness(0) invert(1);
+    }
+    #maintenance-overlay .m-icon { font-size: 48px; margin-bottom: 20px; display: block; }
+    #maintenance-overlay h1 { font-size: 28px; font-weight: 700; margin-bottom: 12px; }
+    #maintenance-overlay p { font-size: 16px; line-height: 1.6; color: #94a3b8; }
+    #maintenance-overlay .m-bar { width: 60px; height: 3px; background: #3b82f6; margin: 24px auto; border-radius: 2px; }
+    #maintenance-overlay .m-footer { margin-top: 40px; font-size: 13px; color: #475569; }
+  </style>
+  <div id="maintenance-overlay">
+    <div style="max-width:560px">
+      <img src="Icons/icone-m-oliveira.png" alt="M. Oliveira">
+      <span class="m-icon">🛠️</span>
+      <h1>Site em Manutenção</h1>
+      <div class="m-bar"></div>
+      <p id="maintenance-msg">Estamos atualizando nosso site para oferecer um atendimento ainda melhor. Em breve estaremos de volta com novidades!</p>
+      <p class="m-footer">M. Oliveira</p>
+    </div>
   </div>
 </body>
 </html>
