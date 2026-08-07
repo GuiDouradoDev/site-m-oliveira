@@ -157,7 +157,12 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.static(path.join(__dirname, '..'), { setHeaders: function(res, p, stat) { if (p.endsWith('.html')) res.setHeader('Content-Type', 'text/html; charset=utf-8'); } }));
+const PUBLIC_ROOT = path.join(__dirname, '..');
+app.use('/Icons', express.static(path.join(PUBLIC_ROOT, 'Icons')));
+app.use('/clientes-parceiros', express.static(path.join(PUBLIC_ROOT, 'clientes-parceiros')));
+app.use('/fotos-servicos', express.static(path.join(PUBLIC_ROOT, 'fotos-servicos')));
+app.get('/robots.txt', (req, res) => res.sendFile(path.join(PUBLIC_ROOT, 'robots.txt')));
+app.get('/sitemap.xml', (req, res) => res.sendFile(path.join(PUBLIC_ROOT, 'sitemap.xml')));
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'moliveira-seguranca.html'), { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
