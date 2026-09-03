@@ -1,77 +1,68 @@
 const express = require('express');
-const { prepare, saveDB } = require('../db');
+const { all, get, insert, update, remove } = require('../db');
 const { authMiddleware } = require('./auth');
 const { sanitize, isValidId, maxLength } = require('../validate');
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const includeUnpublished = req.query.all === '1';
-    const sql = includeUnpublished
-      ? 'SELECT * FROM blog_posts ORDER BY created_at DESC'
-      : 'SELECT * FROM blog_posts WHERE published = 1 ORDER BY created_at DESC';
-    const stmt = prepare(sql);
-    const posts = [];
-    while (stmt.step()) posts.push(stmt.getAsObject());
+    const opts = { order: [{ field: 'created_at', ascending: false }] };
+    if (!includeUnpublished) opts.filter = { published: true };
+    const posts = await all('blog_posts', opts);
     res.json(posts);
   } catch (e) {
     res.status(500).json({ error: 'Erro ao listar posts' });
   }
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   if (!isValidId(req.params.id)) return res.status(400).json({ error: 'ID inválido' });
   try {
-    const stmt = prepare('SELECT * FROM blog_posts WHERE id = ?');
-    stmt.bind([req.params.id]);
-    if (stmt.step()) return res.json(stmt.getAsObject());
-    res.status(404).json({ error: 'Post não encontrado' });
+    const post = await get('blog_posts', req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post não encontrado' });
+    res.json(post);
   } catch (e) {
     res.status(500).json({ error: 'Erro ao buscar post' });
   }
 });
 
-router.post('/', authMiddleware, (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   const { title, content, excerpt } = req.body;
   if (!title || !content) return res.status(400).json({ error: 'Título e conteúdo são obrigatórios' });
   if (!maxLength(title, 300)) return res.status(400).json({ error: 'Título muito longo (máx. 300 caracteres)' });
   if (!maxLength(content, 50000)) return res.status(400).json({ error: 'Conteúdo muito longo (máx. 50000 caracteres)' });
   if (excerpt && !maxLength(excerpt, 500)) return res.status(400).json({ error: 'Resumo muito longo (máx. 500 caracteres)' });
   try {
-    prepare('INSERT INTO blog_posts (title, content, excerpt) VALUES (?, ?, ?)')
-      .run([sanitize(title), content, sanitize(excerpt || '')]);
-    saveDB();
+    await insert('blog_posts', { title: sanitize(title), content, excerpt: sanitize(excerpt || '') });
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao criar post' });
   }
 });
 
-router.put('/:id', authMiddleware, (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
   if (!isValidId(req.params.id)) return res.status(400).json({ error: 'ID inválido' });
   const { title, content, excerpt, published } = req.body;
   try {
-    const t = title ? sanitize(title) : null;
-    const c = content ? content : null;
-    const e = excerpt !== undefined ? sanitize(excerpt) : null;
-    const p = published !== undefined ? (published ? 1 : 0) : null;
-    if (t === null && c === null && e === null && p === null)
-      return res.status(400).json({ error: 'Nada para atualizar' });
-    prepare('UPDATE blog_posts SET title = COALESCE(?, title), content = COALESCE(?, content), excerpt = COALESCE(?, excerpt), published = COALESCE(?, published), updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-      .run([t, c, e, p, req.params.id]);
-    saveDB();
+    const patch = {};
+    if (title) patch.title = sanitize(title);
+    if (content) patch.content = content;
+    if (excerpt !== undefined) patch.excerpt = sanitize(excerpt);
+    if (published !== undefined) patch.published = !!published;
+    patch.updated_at = new Date().toISOString();
+    await update('blog_posts', req.params.id, patch);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao atualizar post' });
   }
 });
 
-router.delete('/:id', authMiddleware, (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
   if (!isValidId(req.params.id)) return res.status(400).json({ error: 'ID inválido' });
   try {
-    prepare('DELETE FROM blog_posts WHERE id = ?').run([req.params.id]);
-    saveDB();
+    await remove('blog_posts', req.params.id);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao excluir post' });

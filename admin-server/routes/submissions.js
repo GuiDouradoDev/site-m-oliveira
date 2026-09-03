@@ -1,7 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const SqliteStore = require('../rate-limit-store');
-const { prepare, saveDB } = require('../db');
+const { all, insert, remove } = require('../db');
 const { authMiddleware } = require('./auth');
 const { isValidEmail, isValidPhone, isValidBrazilianPhone, isValidId, sanitize, maxLength, validateEmailFull, isValidName, isValidCompany } = require('../validate');
 const { notifyNewLead } = require('../mailer');
@@ -14,14 +13,11 @@ const submissionsLimiter = rateLimit({
   message: { error: 'Muitas solicitações enviadas. Tente novamente em 15 minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
-  store: new SqliteStore('submissions'),
 });
 
-router.get('/', authMiddleware, (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
   try {
-    const stmt = prepare('SELECT * FROM submissions ORDER BY created_at DESC');
-    const submissions = [];
-    while (stmt.step()) submissions.push(stmt.getAsObject());
+    const submissions = await all('submissions', { order: [{ field: 'created_at', ascending: false }] });
     res.json(submissions);
   } catch (e) {
     res.status(500).json({ error: 'Erro ao listar solicitações' });
@@ -59,9 +55,14 @@ router.post('/', submissionsLimiter, async (req, res) => {
   if (message && !maxLength(message, 2000)) return res.status(400).json({ error: 'Mensagem muito longa (máx. 2000 caracteres)' });
 
   try {
-    prepare('INSERT INTO submissions (name, email, phone, company, service, message) VALUES (?, ?, ?, ?, ?, ?)')
-      .run([sanitize(name), sanitize(email), sanitize(phone), sanitize(company), sanitize(service), sanitize(message)]);
-    saveDB();
+    await insert('submissions', {
+      name: sanitize(name),
+      email: sanitize(email),
+      phone: sanitize(phone),
+      company: sanitize(company),
+      service: sanitize(service),
+      message: sanitize(message),
+    });
     notifyNewLead({ name, email, phone, company, service, message });
 
     // Notify via Web3Forms (server-side, não expõe a chave no cliente)
@@ -92,11 +93,10 @@ router.post('/', submissionsLimiter, async (req, res) => {
   }
 });
 
-router.delete('/:id', authMiddleware, (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
   if (!isValidId(req.params.id)) return res.status(400).json({ error: 'ID inválido' });
   try {
-    prepare('DELETE FROM submissions WHERE id = ?').run([req.params.id]);
-    saveDB();
+    await remove('submissions', req.params.id);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao excluir' });

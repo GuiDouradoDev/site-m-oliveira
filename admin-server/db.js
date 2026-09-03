@@ -1,126 +1,117 @@
-const initSqlJs = require('sql.js');
-const fs = require('fs');
-const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'site.db');
-let db = null;
+let _sb = null;
 
 async function initDB() {
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  const SQL = await initSqlJs();
-  if (fs.existsSync(DB_PATH)) {
-    const buf = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(buf);
-  } else {
-    db = new SQL.Database();
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) {
+    console.error('ERRO: SUPABASE_URL e SUPABASE_SECRET_KEY (ou SERVICE_KEY) são obrigatórios.');
+    console.error('Configure-os nas variáveis de ambiente antes de iniciar.');
+    process.exit(1);
+  }
+  _sb = createClient(url, key, { auth: { persistSession: false } });
+
+  const { data, error } = await _sb.from('users').select('id').limit(1);
+  if (error) {
+    console.error('ERRO ao acessar o banco no Supabase:', error.message);
+    console.error('Verifique se o script supabase-schema.sql foi executado no SQL Editor.');
+    throw error;
   }
 
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE,
-    password_hash TEXT
-  )`);
-  db.run(`CREATE TABLE IF NOT EXISTS photos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    filename TEXT,
-    title TEXT,
-    service_id INTEGER DEFAULT 0,
-    sort_order INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-  try { db.run("ALTER TABLE photos ADD COLUMN service_id INTEGER DEFAULT 0"); } catch(e) {}
-  db.run(`CREATE TABLE IF NOT EXISTS logos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    filename TEXT,
-    company_name TEXT,
-    sort_order INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-  db.run(`CREATE TABLE IF NOT EXISTS content (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    section TEXT UNIQUE,
-    value TEXT
-  )`);
-  db.run(`CREATE TABLE IF NOT EXISTS blog_posts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    content TEXT,
-    excerpt TEXT,
-    published INTEGER DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-  db.run(`CREATE TABLE IF NOT EXISTS submissions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    email TEXT,
-    phone TEXT,
-    company TEXT DEFAULT '',
-    service TEXT DEFAULT '',
-    message TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-  try { db.run('ALTER TABLE submissions ADD COLUMN company TEXT DEFAULT \'\''); } catch(e) {}
-  try { db.run('ALTER TABLE submissions ADD COLUMN service TEXT DEFAULT \'\''); } catch(e) {}
-  db.run(`CREATE TABLE IF NOT EXISTS rate_limits (
-    key TEXT PRIMARY KEY,
-    hits INTEGER NOT NULL DEFAULT 0,
-    expires_at INTEGER NOT NULL
-  )`);
-  db.run(`CREATE TABLE IF NOT EXISTS services (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    description TEXT,
-    icon TEXT DEFAULT '📋',
-    sort_order INTEGER DEFAULT 0,
-    active INTEGER DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-  db.run(`CREATE TABLE IF NOT EXISTS diferenciais (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    description TEXT,
-    icon TEXT DEFAULT '⭐',
-    sort_order INTEGER DEFAULT 0,
-    active INTEGER DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  const row = db.exec('SELECT COUNT(*) as c FROM users')[0].values[0][0];
-  if (row === 0) {
+  if (!data || data.length === 0) {
     const hash = bcrypt.hashSync('seg123', 10);
-    db.run('INSERT INTO users (username, password_hash) VALUES (?, ?)', ['admin', hash]);
-    console.log('');
+    await _sb.from('users').insert({ username: 'admin', password_hash: hash });
     console.log('⚠  ATENÇÃO: Usuário padrão criado — admin / seg123');
     console.log('⚠  Altere a senha imediatamente após o primeiro login!');
-    console.log('');
   }
 
-  saveDB();
+  console.log('Conexão com Supabase Postgres OK.');
 }
 
-function saveDB() {
-  if (db) {
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(DB_PATH, buffer);
+function client() {
+  return _sb;
+}
+
+async function all(table, { filter, order } = {}) {
+  let q = _sb.from(table).select('*');
+  if (order) {
+    for (const o of order) {
+      q = q.order(o.field, { ascending: o.ascending });
+    }
   }
-}
-
-function getDB() {
-  return db;
-}
-
-function prepare(sql, params) {
-  try {
-    const stmt = db.prepare(sql);
-    if (params) stmt.bind(params);
-    return stmt;
-  } catch (e) {
-    console.error('SQL prepare error:', sql, params, e.message);
-    throw e;
+  if (filter) {
+    for (const [field, value] of Object.entries(filter)) {
+      if (value === null) q = q.is(field, null);
+      else q = q.eq(field, value);
+    }
   }
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
 }
 
-module.exports = { initDB, saveDB, getDB, prepare };
+async function get(table, id) {
+  const { data, error } = await _sb.from(table).select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function getBy(table, filter) {
+  let q = _sb.from(table).select('*');
+  for (const [k, v] of Object.entries(filter)) {
+    if (v === null) q = q.is(k, null);
+    else q = q.eq(k, v);
+  }
+  const { data, error } = await q.maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function first(table, filter) {
+  let q = _sb.from(table).select('*').limit(1);
+  for (const [k, v] of Object.entries(filter)) {
+    if (v === null) q = q.is(k, null);
+    else q = q.eq(k, v);
+  }
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data && data[0]) || null;
+}
+
+async function insert(table, obj) {
+  const { data, error } = await _sb.from(table).insert(obj).select().single();
+  if (error) throw error;
+  return data;
+}
+
+async function update(table, id, obj) {
+  if (!obj || Object.keys(obj).length === 0) return null;
+  const { data, error } = await _sb.from(table).update(obj).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+async function remove(table, id) {
+  const { error } = await _sb.from(table).delete().eq('id', id);
+  if (error) throw error;
+}
+
+async function upsertContent(section, value) {
+  const { error } = await _sb.from('content').upsert({ section, value }, { onConflict: 'section' });
+  if (error) throw error;
+}
+
+module.exports = {
+  initDB,
+  client,
+  all,
+  get,
+  getBy,
+  first,
+  insert,
+  update,
+  remove,
+  upsertContent,
+};

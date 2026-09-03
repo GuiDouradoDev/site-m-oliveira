@@ -5,7 +5,6 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
-const { initDB } = require('./db');
 const { useSupabase, getPublicUrl } = require('./storage');
 const authRouter = require('./routes/auth').router;
 const photosRouter = require('./routes/photos').router;
@@ -85,7 +84,6 @@ app.use('/uploads', express.static(process.env.UPLOAD_DIR || path.join(__dirname
 app.use('/admin/assets', express.static(path.join(__dirname, 'public')));
 
 const rateLimit = require('express-rate-limit');
-const SqliteStore = require('./rate-limit-store');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -93,7 +91,6 @@ const loginLimiter = rateLimit({
   message: { error: 'Muitas tentativas de login. Tente novamente em 15 minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
-  store: new SqliteStore('login'),
 });
 
 const submissionsLimiter = rateLimit({
@@ -102,7 +99,6 @@ const submissionsLimiter = rateLimit({
   message: { error: 'Muitas solicitações enviadas. Tente novamente em 15 minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
-  store: new SqliteStore('submissions'),
 });
 
 const apiLimiter = rateLimit({
@@ -111,7 +107,6 @@ const apiLimiter = rateLimit({
   message: { error: 'Muitas requisições. Tente novamente mais tarde.' },
   standardHeaders: true,
   legacyHeaders: false,
-  store: new SqliteStore('api'),
 });
 
 const changePasswordLimiter = rateLimit({
@@ -120,7 +115,6 @@ const changePasswordLimiter = rateLimit({
   message: { error: 'Muitas tentativas de troca de senha. Tente novamente em 15 minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
-  store: new SqliteStore('changepw'),
 });
 
 app.use('/api/auth/login', loginLimiter);
@@ -131,10 +125,8 @@ if (HTTPS_MODE === 'http') {
   console.warn('[AVISO] HTTPS_MODE=http — A sessão do admin e tokens JWT trafegam em texto puro. Configure HTTPS para produção.');
 }
 
-initDB();
-
 const { seed } = require('./seed');
-seed().catch(e => console.error('Seed error:', e));
+seed().catch(e => { console.error('Falha ao inicializar banco:', e); process.exit(1); });
 
 app.use('/api/auth', authRouter);
 app.use('/api/photos', photosRouter);
@@ -152,13 +144,13 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-const { prepare } = require('./db');
-app.use((req, res, next) => {
+const { getBy } = require('./db');
+app.use(async (req, res, next) => {
   if (req.path.startsWith('/admin') || req.path.startsWith('/api')) return next();
   if (/\.[a-zA-Z0-9]+$/.test(req.path)) return next();
   try {
-    const stmt = prepare("SELECT value FROM content WHERE section = 'maintenance_mode'");
-    if (stmt.step() && stmt.getAsObject().value === '1') {
+    const row = await getBy('content', { section: 'maintenance_mode' });
+    if (row && row.value === '1') {
       return res.sendFile(path.join(__dirname, 'public', 'maintenance.html'));
     }
   } catch (e) { /* ignore */ }

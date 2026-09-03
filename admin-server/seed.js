@@ -1,24 +1,14 @@
 const path = require('path');
 const fs = require('fs');
-const { initDB, saveDB, prepare, getDB } = require('./db');
+const { initDB, all, insert, first } = require('./db');
 
 async function seed() {
   await initDB();
-  const db = getDB();
 
-  function tableCount(tableName) {
-    try {
-      const result = db.exec(`SELECT COUNT(*) as c FROM ${tableName}`);
-      return result[0]?.values[0]?.[0] || 0;
-    } catch {
-      return 0;
-    }
-  }
-
-  const contentCount = tableCount('content');
-  const photosCount = tableCount('photos');
-  const logosCount = tableCount('logos');
-  const servicesCount = tableCount('services');
+  const contentCount = (await all('content')).length;
+  const photosCount = (await all('photos')).length;
+  const logosCount = (await all('logos')).length;
+  const servicesCount = (await all('services')).length;
 
   console.log(`Estado atual: content=${contentCount}, photos=${photosCount}, logos=${logosCount}, services=${servicesCount}`);
 
@@ -48,7 +38,7 @@ async function seed() {
   };
 
   for (const [key, value] of Object.entries(content)) {
-    prepare('INSERT INTO content (section, value) VALUES (?, ?)').run([key, value]);
+    await insert('content', { section: key, value });
   }
   console.log('Content seeded.');
 
@@ -68,7 +58,7 @@ async function seed() {
   ];
 
   for (const s of services) {
-    prepare('INSERT INTO services (title, description, icon, sort_order) VALUES (?, ?, ?, ?)').run([s.title, s.description, s.icon, s.sort_order]);
+    await insert('services', { title: s.title, description: s.description, icon: s.icon, sort_order: s.sort_order, active: true });
   }
 
   const trainingServices = [
@@ -83,7 +73,7 @@ async function seed() {
   ];
 
   for (const s of trainingServices) {
-    prepare('INSERT INTO services (title, description, icon, sort_order, active) VALUES (?, ?, ?, ?, 0)').run([s.title, s.description, s.icon, s.sort_order]);
+    await insert('services', { title: s.title, description: s.description, icon: s.icon, sort_order: s.sort_order, active: false });
   }
   console.log('Services seeded.');
 
@@ -96,27 +86,18 @@ async function seed() {
   ];
 
   for (const d of diferenciais) {
-    prepare('INSERT INTO diferenciais (title, description, icon, sort_order) VALUES (?, ?, ?, ?)').run([d.title, d.description, d.icon, d.sort_order]);
+    await insert('diferenciais', { title: d.title, description: d.description, icon: d.icon, sort_order: d.sort_order, active: true });
   }
   console.log('Diferenciais seeded.');
-
-  function filenameExists(table, filename) {
-    try {
-      const stmt = prepare(`SELECT id FROM ${table} WHERE filename = ? LIMIT 1`);
-      stmt.bind([filename]);
-      return stmt.step();
-    } catch {
-      return false;
-    }
-  }
 
   const PHOTOS_DST = path.join(process.env.UPLOAD_DIR || path.join(__dirname, 'uploads'), 'photos');
   let photosImported = 0;
   if (fs.existsSync(PHOTOS_DST)) {
     const files = fs.readdirSync(PHOTOS_DST).filter(f => /\.(jpe?g|png)$/i.test(f));
     for (const f of files) {
-      if (!filenameExists('photos', f)) {
-        prepare('INSERT INTO photos (filename, title) VALUES (?, ?)').run([f, f.replace(/\.(jpe?g|png)$/i, '').substring(0, 60)]);
+      const exists = await first('photos', { filename: f });
+      if (!exists) {
+        await insert('photos', { filename: f, title: f.replace(/\.(jpe?g|png)$/i, '').substring(0, 60) });
         photosImported++;
       }
     }
@@ -129,15 +110,15 @@ async function seed() {
     const files = fs.readdirSync(LOGOS_DST).filter(f => /\.(png|jpe?g|svg)$/i.test(f));
     for (const f of files) {
       const company = path.parse(f).name;
-      if (!filenameExists('logos', f)) {
-        prepare('INSERT INTO logos (filename, company_name) VALUES (?, ?)').run([f, company]);
+      const exists = await first('logos', { filename: f });
+      if (!exists) {
+        await insert('logos', { filename: f, company_name: company });
         logosImported++;
       }
     }
     console.log(`${logosImported} new logos imported from uploads (${files.length} total found).`);
   }
 
-  saveDB();
   console.log('Seed completed successfully!');
 }
 

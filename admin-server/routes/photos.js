@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const { prepare, saveDB } = require('../db');
+const { all, insert, update, get, remove } = require('../db');
 const { authMiddleware } = require('./auth');
 const { sanitize, isValidId, maxLength } = require('../validate');
 const { getPublicUrl, uploadFile, deleteFile } = require('../storage');
@@ -24,22 +24,14 @@ function photoUrl(p) {
   return getPublicUrl('photos', p.filename);
 }
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const serviceId = req.query.service;
-    let sql;
-    if (serviceId) {
-      sql = prepare('SELECT * FROM photos WHERE service_id = ? ORDER BY sort_order ASC, created_at DESC');
-      sql.bind([parseInt(serviceId)]);
-    } else {
-      sql = prepare('SELECT * FROM photos ORDER BY sort_order ASC, created_at DESC');
-    }
-    const photos = [];
-    while (sql.step()) {
-      const p = sql.getAsObject();
-      p.url = photoUrl(p);
-      photos.push(p);
-    }
+    const opts = serviceId
+      ? { filter: { service_id: parseInt(serviceId) }, order: [{ field: 'sort_order', ascending: true }, { field: 'created_at', ascending: false }] }
+      : { order: [{ field: 'sort_order', ascending: true }, { field: 'created_at', ascending: false }] };
+    const photos = await all('photos', opts);
+    photos.forEach(p => { p.url = photoUrl(p); });
     res.json(photos);
   } catch (e) {
     console.error('Photos list error:', e);
@@ -53,8 +45,7 @@ router.post('/', authMiddleware, upload.single('photo'), async (req, res) => {
     const title = sanitize(req.body.title || req.file.originalname);
     const serviceId = parseInt(req.body.service_id) || 0;
     const filename = await uploadFile('photos', req.file.buffer, req.file.originalname, req.file.mimetype);
-    prepare('INSERT INTO photos (filename, title, service_id) VALUES (?, ?, ?)').run([filename, title, serviceId]);
-    saveDB();
+    await insert('photos', { filename, title, service_id: serviceId });
     const url = getPublicUrl('photos', filename);
     res.json({ success: true, filename, title, service_id: serviceId, url });
   } catch (e) {
@@ -63,17 +54,16 @@ router.post('/', authMiddleware, upload.single('photo'), async (req, res) => {
   }
 });
 
-router.put('/:id', authMiddleware, (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
   if (!isValidId(req.params.id)) return res.status(400).json({ error: 'ID inválido' });
   const { title, sort_order, service_id } = req.body;
   try {
-    const t = title !== undefined ? sanitize(title) : null;
-    const so = sort_order !== undefined ? sort_order : null;
-    const sid = service_id !== undefined ? parseInt(service_id) : null;
-    if (t === null && so === null && sid === null) return res.status(400).json({ error: 'Nada para atualizar' });
-    prepare('UPDATE photos SET title = COALESCE(?, title), sort_order = COALESCE(?, sort_order), service_id = COALESCE(?, service_id) WHERE id = ?')
-      .run([t, so, sid, req.params.id]);
-    saveDB();
+    const patch = {};
+    if (title !== undefined) patch.title = sanitize(title);
+    if (sort_order !== undefined) patch.sort_order = sort_order;
+    if (service_id !== undefined) patch.service_id = parseInt(service_id);
+    if (Object.keys(patch).length === 0) return res.status(400).json({ error: 'Nada para atualizar' });
+    await update('photos', req.params.id, patch);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao atualizar' });
@@ -83,14 +73,9 @@ router.put('/:id', authMiddleware, (req, res) => {
 router.delete('/:id', authMiddleware, async (req, res) => {
   if (!isValidId(req.params.id)) return res.status(400).json({ error: 'ID inválido' });
   try {
-    const stmt = prepare('SELECT filename FROM photos WHERE id = ?');
-    stmt.bind([req.params.id]);
-    if (stmt.step()) {
-      const row = stmt.getAsObject();
-      await deleteFile('photos', row.filename);
-    }
-    prepare('DELETE FROM photos WHERE id = ?').run([req.params.id]);
-    saveDB();
+    const row = await get('photos', req.params.id);
+    if (row) await deleteFile('photos', row.filename);
+    await remove('photos', req.params.id);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: 'Erro ao excluir' });
