@@ -6,6 +6,7 @@ const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const { initDB } = require('./db');
+const { useSupabase, getPublicUrl } = require('./storage');
 const authRouter = require('./routes/auth').router;
 const photosRouter = require('./routes/photos').router;
 const logosRouter = require('./routes/logos').router;
@@ -143,6 +144,13 @@ app.use('/api/blog', blogRouter);
 app.use('/api/submissions', submissionsRouter);
 app.use('/api/services', servicesRouter);
 app.use('/api/diferenciais', diferenciaisRouter);
+
+app.get('/api/config', (req, res) => {
+  res.json({
+    storage: useSupabase ? 'supabase' : 'local',
+    uploadsBaseURL: getPublicUrl('', '').replace(/\/$/, ''),
+  });
+});
 
 const { prepare } = require('./db');
 app.use((req, res, next) => {

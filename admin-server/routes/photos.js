@@ -1,38 +1,28 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const { prepare, saveDB } = require('../db');
 const { authMiddleware } = require('./auth');
 const { sanitize, isValidId, maxLength } = require('../validate');
+const { getPublicUrl, uploadFile, deleteFile } = require('../storage');
 
 const router = express.Router();
-const UPLOAD_DIR = path.join(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'), 'photos');
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const name = Date.now() + '-' + Math.random().toString(36).substring(2, 8) + ext;
-    cb(null, name);
-  }
-});
-const MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
+    const MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (!MIME_TYPES.includes(file.mimetype)) {
-      return cb(new Error('Formato não permitido. Use JPG, PNG, GIF ou WebP.'));
-    }
-    const allowed = /\.(jpe?g|png|gif|webp)$/i;
-    if (!allowed.test(path.extname(file.originalname))) {
       return cb(new Error('Formato não permitido. Use JPG, PNG, GIF ou WebP.'));
     }
     cb(null, true);
   },
   limits: { fileSize: 10 * 1024 * 1024 }
 });
+
+function photoUrl(p) {
+  return getPublicUrl('photos', p.filename);
+}
 
 router.get('/', (req, res) => {
   try {
@@ -45,7 +35,11 @@ router.get('/', (req, res) => {
       sql = prepare('SELECT * FROM photos ORDER BY sort_order ASC, created_at DESC');
     }
     const photos = [];
-    while (sql.step()) photos.push(sql.getAsObject());
+    while (sql.step()) {
+      const p = sql.getAsObject();
+      p.url = photoUrl(p);
+      photos.push(p);
+    }
     res.json(photos);
   } catch (e) {
     console.error('Photos list error:', e);
@@ -53,14 +47,16 @@ router.get('/', (req, res) => {
   }
 });
 
-router.post('/', authMiddleware, upload.single('photo'), (req, res) => {
+router.post('/', authMiddleware, upload.single('photo'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
   try {
     const title = sanitize(req.body.title || req.file.originalname);
     const serviceId = parseInt(req.body.service_id) || 0;
-    prepare('INSERT INTO photos (filename, title, service_id) VALUES (?, ?, ?)').run([req.file.filename, title, serviceId]);
+    const filename = await uploadFile('photos', req.file.buffer, req.file.originalname, req.file.mimetype);
+    prepare('INSERT INTO photos (filename, title, service_id) VALUES (?, ?, ?)').run([filename, title, serviceId]);
     saveDB();
-    res.json({ success: true, filename: req.file.filename, title, service_id: serviceId });
+    const url = getPublicUrl('photos', filename);
+    res.json({ success: true, filename, title, service_id: serviceId, url });
   } catch (e) {
     console.error('Photo upload error:', e);
     res.status(500).json({ error: 'Erro ao salvar foto' });
@@ -84,15 +80,14 @@ router.put('/:id', authMiddleware, (req, res) => {
   }
 });
 
-router.delete('/:id', authMiddleware, (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
   if (!isValidId(req.params.id)) return res.status(400).json({ error: 'ID inválido' });
   try {
     const stmt = prepare('SELECT filename FROM photos WHERE id = ?');
     stmt.bind([req.params.id]);
     if (stmt.step()) {
       const row = stmt.getAsObject();
-      const filePath = path.join(UPLOAD_DIR, row.filename);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      await deleteFile('photos', row.filename);
     }
     prepare('DELETE FROM photos WHERE id = ?').run([req.params.id]);
     saveDB();

@@ -1406,7 +1406,7 @@
         var item = document.createElement('div');
         item.className = 'gallery-item';
         var img = document.createElement('img');
-        img.src = apiUrl + '/uploads/photos/' + foto.filename;
+        img.src = foto.url || (apiUrl + '/uploads/photos/' + foto.filename);
         img.alt = foto.title || 'Treinamento';
         img.loading = 'lazy';
         item.appendChild(img);
@@ -1627,7 +1627,7 @@
           wrap.className = 'logo-wrap';
           
           var img = document.createElement('img');
-          img.src = apiUrl + '/uploads/logos/' + logo.filename;
+          img.src = logo.url || (apiUrl + '/uploads/logos/' + logo.filename);
           img.alt = logo.company_name || 'Logo';
           img.loading = 'lazy';
           

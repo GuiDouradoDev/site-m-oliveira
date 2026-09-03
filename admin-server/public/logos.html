@@ -67,7 +67,7 @@ async function loadLogos() {
     list.innerHTML = '<div class="grid-list">' + logos.map(l =>
       `<div class="grid-item">
         <div class="thumb" style="display:flex;align-items:center;justify-content:center;background:white;padding:16px">
-          <img src="/uploads/logos/${l.filename}" alt="${l.company_name}" style="max-width:100%;max-height:100%;object-fit:contain">
+          <img src="${l.url || '/uploads/logos/' + l.filename}" alt="${l.company_name}" style="max-width:100%;max-height:100%;object-fit:contain">
         </div>
         <div class="info"><div class="name">${l.company_name}</div><div class="date">${new Date(l.created_at).toLocaleDateString('pt-BR')}</div></div>
         <div class="actions">

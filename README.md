@@ -59,13 +59,14 @@ Site institucional completo para a **M. Oliveira – Segurança do Trabalho**, c
 - **JWT** (`jsonwebtoken`) — autenticação do painel
 - **bcryptjs** — hash de senhas
 - **Multer** — upload de imagens
-- **Nodemailer** — envio de e-mails
+- **Supabase Storage** — armazenamento gratuito para fotos/logos (1GB)- **Nodemailer** — envio de e-mails
 - **Helmet** — segurança HTTP
 - **express-rate-limit** — proteção contra brute force
 - **Greenlock** — SSL automático (Let's Encrypt)
 
 ### Deploy
 - **Render** — hospedagem do admin-server
+- **Supabase Storage** — armazenamento de imagens (gratuito, sem cartão)
 - **GitHub Pages** / hospedagem estática — site front-end
 - **Domínio próprio** com SSL
 
@@ -83,6 +84,7 @@ sitemap.xml                # Sitemap para SEO
 admin-server/              # Painel administrativo
 ├── server.js              # Servidor Express
 ├── db.js                  # Conexão SQLite
+├── storage.js             # Armazenamento (Supabase ou local)
 ├── mailer.js              # Configuração de e-mail
 ├── routes/                # Rotas da API
 │   ├── auth.js            # Autenticação
@@ -93,7 +95,7 @@ admin-server/              # Painel administrativo
 │   ├── diferenciais.js    # Diferenciais
 │   └── submissions.js     # Formulários recebidos
 ├── public/                # Interface do painel
-└── uploads/               # Imagens enviadas
+└── uploads/               # Imagens enviadas (local fallback)
 ```
 
 ---
@@ -148,6 +150,46 @@ Acesse `/admin/` para fazer login no painel de administração.
 - **Front-end:** Hospedagem estática (GitHub Pages, Vercel, ou similar)
 - **Admin-server:** Hospedado no Render com deploy automático via GitHub
 - **Domínio:** [`moliveiraseguranca.com.br`](https://moliveiraseguranca.com.br)
+
+---
+
+## ☁️ Configuração do Supabase Storage (Armazenamento Gratuito)
+
+As fotos e logos são armazenadas no **Supabase Storage** — 1GB grátis, **sem cartão de crédito**.
+
+### Passo 1: Criar conta e projeto no Supabase
+1. Acesse [supabase.com](https://supabase.com) e crie uma conta gratuita (sem cartão)
+2. Clique em **New project**
+3. Escolha um nome (ex: `moliveira`), uma senha de banco e a região mais próxima (`South America`)
+4. Aguarde o projeto ser criado (alguns minutos)
+
+### Passo 2: Criar o bucket público
+1. No menu lateral, vá em **Storage**
+2. Clique em **New bucket**
+3. Nome do bucket: `uploads`
+4. Marque a opção **Public bucket** (obrigatório!)
+5. Clique em **Create bucket**
+
+### Passo 3: Obter as credenciais
+1. No menu lateral, vá em **Settings** (engrenagem) → **API Keys**
+2. Anote os valores:
+   - **Project URL** → `SUPABASE_URL`
+   - **Secret key** (`sb_secret_...`) → `SUPABASE_SECRET_KEY`
+   - (Se o seu projeto tiver a chave legada **Service Role Key** `eyJ...`, use-a também em `SUPABASE_SERVICE_KEY`)
+
+### Passo 4: Configurar no Render
+No painel do Render, adicione estas variáveis de ambiente:
+
+| Variável | Valor |
+|----------|-------|
+| `SUPABASE_URL` | Project URL do seu projeto Supabase |
+| `SUPABASE_SECRET_KEY` | Secret key (`sb_secret_...`) |
+| `SUPABASE_BUCKET` | `uploads` |
+
+### Passo 5: Deploy
+Faça push das alterações para o GitHub. O Render fará deploy automaticamente.
+
+> **Importante:** Fotos adicionadas antes da configuração do Supabase ficam salvas localmente. Novas fotos serão salvas no Supabase e persistirão entre deploys.
 
 ---
 

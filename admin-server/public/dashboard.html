@@ -249,7 +249,7 @@ async function load() {
       recentPhotos.innerHTML = '<div class="empty-state" style="padding:30px 20px"><p>Nenhuma foto adicionada ainda</p></div>';
     } else {
       recentPhotos.innerHTML = '<div class="photo-strip">' + photos.slice(0, 6).map(function(p) {
-        return '<div class="item"><img src="/uploads/photos/' + p.filename + '" alt="' + p.title + '" loading="lazy"><div class="name">' + p.title + '</div></div>';
+        return '<div class="item"><img src="' + (p.url || '/uploads/photos/' + p.filename) + '" alt="' + p.title + '" loading="lazy"><div class="name">' + p.title + '</div></div>';
       }).join('') + '</div>';
     }
 

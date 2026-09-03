@@ -21,3 +21,11 @@ services:
         value: https://moliveira-admin.onrender.com,https://moliveiraseguranca.com.br,https://www.moliveiraseguranca.com.br,https://guidouradodev.github.io
       - key: WEB3FORMS_ACCESS_KEY
         sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: uploads
+      - key: UPLOADS_BASE_URL
+        value: https://moliveira-admin.onrender.com

@@ -94,7 +94,7 @@ function renderPhotoCard(p) {
 
   var img = document.createElement('img');
   img.className = 'thumb';
-  img.src = '/uploads/photos/' + p.filename;
+  img.src = p.url || ('/uploads/photos/' + p.filename);
   img.alt = p.title || '';
   item.appendChild(img);
 
