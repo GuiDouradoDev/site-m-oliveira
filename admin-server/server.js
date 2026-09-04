@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -45,6 +46,7 @@ const corsOptions = {
   credentials: true
 };
 app.use(cors(corsOptions));
+app.use(compression());
 
 const helmet = require('helmet');
 app.use(helmet({
@@ -80,7 +82,7 @@ app.use(helmet({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static(process.env.UPLOAD_DIR || path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(process.env.UPLOAD_DIR || path.join(__dirname, 'uploads'), { maxAge: '1d', immutable: true }));
 app.use('/admin/assets', express.static(path.join(__dirname, 'public')));
 
 const rateLimit = require('express-rate-limit');
@@ -128,6 +130,11 @@ if (HTTPS_MODE === 'http') {
 const { seed } = require('./seed');
 seed().catch(e => { console.error('Falha ao inicializar banco:', e); process.exit(1); });
 
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, max-age=0');
+  next();
+});
+
 app.use('/api/auth', authRouter);
 app.use('/api/photos', photosRouter);
 app.use('/api/logos', logosRouter);
@@ -158,13 +165,14 @@ app.use(async (req, res, next) => {
 });
 
 const PUBLIC_ROOT = path.join(__dirname, '..');
-app.use('/Icons', express.static(path.join(PUBLIC_ROOT, 'Icons')));
+app.use('/Icons', express.static(path.join(PUBLIC_ROOT, 'Icons'), { maxAge: '7d', immutable: true }));
 app.use('/clientes-parceiros', express.static(path.join(PUBLIC_ROOT, 'clientes-parceiros')));
 app.use('/fotos-servicos', express.static(path.join(PUBLIC_ROOT, 'fotos-servicos')));
 app.get('/robots.txt', (req, res) => res.sendFile(path.join(PUBLIC_ROOT, 'robots.txt')));
 app.get('/sitemap.xml', (req, res) => res.sendFile(path.join(PUBLIC_ROOT, 'sitemap.xml')));
 
 app.get('/', (req, res) => {
+  res.set('Cache-Control', 'no-store, max-age=0');
   res.sendFile(path.join(__dirname, '..', 'moliveira-seguranca.html'), { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 });
 

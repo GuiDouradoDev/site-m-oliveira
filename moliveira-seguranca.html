@@ -38,6 +38,7 @@
 <script>window.MOLIVEIRA_CONFIG={API_URL:'https://moliveira-admin.onrender.com'};</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://moliveira-admin.onrender.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;0,700;0,900;1,300&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -1449,8 +1450,8 @@
 
     var _cacheBust = '?t=' + Date.now();
     Promise.all([
-      fetch(apiUrl + '/api/services' + _cacheBust).then(function(r) { return r.json(); }).catch(function() { return []; }),
-      fetch(apiUrl + '/api/photos' + _cacheBust).then(function(r) { return r.json(); }).catch(function() { return []; })
+      fetch(apiUrl + '/api/services' + _cacheBust, {cache:'no-store'}).then(function(r) { return r.json(); }).catch(function() { return []; }),
+      fetch(apiUrl + '/api/photos' + _cacheBust, {cache:'no-store'}).then(function(r) { return r.json(); }).catch(function() { return []; })
     ])
     .then(function(results) {
       var services = results[0];
@@ -1584,7 +1585,7 @@
     var isFileProtocol = window.location.protocol === 'file:';
     var _cacheBust = '?t=' + Date.now();
 
-    fetch(apiUrl + '/api/logos' + _cacheBust)
+    fetch(apiUrl + '/api/logos' + _cacheBust, {cache:'no-store'})
       .then(function(r) {
         if (!r.ok) throw new Error('Erro na resposta do servidor');
         return r.json();
