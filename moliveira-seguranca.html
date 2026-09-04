@@ -15,6 +15,9 @@
 <meta name="twitter:title" content="M. Oliveira | Segurança do Trabalho">
 <meta name="twitter:description" content="Especialistas em Segurança do Trabalho. Treinamentos NR, PGR, PCMSO, CIPA e mais.">
 <link rel="canonical" href="https://moliveiraseguranca.com.br">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -1408,6 +1411,7 @@
         var img = document.createElement('img');
         img.src = foto.url || (apiUrl + '/uploads/photos/' + foto.filename);
         img.alt = foto.title || 'Treinamento';
+        img.decoding = 'async';
         img.loading = 'lazy';
         item.appendChild(img);
         fragment.appendChild(item);
@@ -1443,9 +1447,10 @@
       galeria.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--gray-light);line-height:1.8">' + msg + '</div>';
     }
 
+    var _cacheBust = '?t=' + Date.now();
     Promise.all([
-      fetch(apiUrl + '/api/services').then(function(r) { return r.json(); }).catch(function() { return []; }),
-      fetch(apiUrl + '/api/photos').then(function(r) { return r.json(); }).catch(function() { return []; })
+      fetch(apiUrl + '/api/services' + _cacheBust).then(function(r) { return r.json(); }).catch(function() { return []; }),
+      fetch(apiUrl + '/api/photos' + _cacheBust).then(function(r) { return r.json(); }).catch(function() { return []; })
     ])
     .then(function(results) {
       var services = results[0];
@@ -1577,8 +1582,9 @@
 
     var apiUrl = getApiUrl();
     var isFileProtocol = window.location.protocol === 'file:';
+    var _cacheBust = '?t=' + Date.now();
 
-    fetch(apiUrl + '/api/logos')
+    fetch(apiUrl + '/api/logos' + _cacheBust)
       .then(function(r) {
         if (!r.ok) throw new Error('Erro na resposta do servidor');
         return r.json();
